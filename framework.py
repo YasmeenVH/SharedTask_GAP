@@ -14,3 +14,4 @@ class LinearRegression(nn.Module):
         return y_pred
 
 # model = LinearRegression()
+## FRAMEWORK NEEDS TO BE CHANGED , WE NEED TO FOLLOW THE FRAMEWORK SHEET FROM THIS GIT: https://github.com/zlkanata/DeepGlobe-Road-Extraction-Challenge
