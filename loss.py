@@ -25,6 +25,3 @@ class coref_loss(nn.Module):
         """
         return pass
 
-
-    def __call__(self):
-        return self.bce_loss(self.y_pred[0][2], self.y_true[0][2])
