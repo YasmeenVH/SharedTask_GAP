@@ -63,7 +63,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             ('A_off', A_OFFSET),
             ('A_coref', A_COREF),
             ('B', A),
-            ('B_off', B_OFFSET)
+            ('B_off', B_OFFSET),
             ('B_coref', B_COREF),
             ('URL', None)        
         ]
