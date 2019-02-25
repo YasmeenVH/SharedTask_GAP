@@ -1,5 +1,7 @@
 import torch
 from torch.nn import functional
+import sys
+sys.path.insert(0, './networks')
 
 import copy
 import model
