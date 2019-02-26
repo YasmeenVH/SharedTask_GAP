@@ -2,23 +2,27 @@ import torch
 from torch.nn import functional
 import sys
 sys.path.insert(0, './networks')
-
+import torch.utils.data as data
 import copy
-import model
-"""
-def clip_gradient(model, clip_value):
-    params = list(filter(lambda p: p.grad is not None, model.parameters()))
-    for p in params:
-        p.grad.data.clamp_(-clip_value, clip_value)
-        
-"""
+from data import GapDataset
+from networks.model import LogisticRegression
+from networks.SVM import SVM
+from networks.feedforward import feedforward_nn
+from loss import coref_loss
 
 
+#Data path
 
+train_path = 'C:/Users/Y/Documents/MILA/SharedTask_GAP/Data/gap-development.tsv'
+test_path = 'C:/Users/Y/Documents/MILA/SharedTask_GAP/Data/gap-test.tsv'
+valid_path = 'C:/Users/Y/Documents/MILA/SharedTask_GAP/Data/gap-validation.tsv'
 
-# THIS IS THE EXAMPLE TRAIN FROM LSTM CLASSIFIER -- NEED TO CHANGE TO FIT TO OUR LOGISTIC REGRESSION
+#Load data
+dataset = GapDataset(train_path, test_path, valid_path)
+
+data_loader = dataset.loader()
+
 class model_train(object):
-
     num_of_train = 0
     num_of_eval = 0
 
@@ -34,37 +38,38 @@ class model_train(object):
 
     def train(self):
 
-        model_train.num_of_train += 1
+        model_train.num_of_train += 1 # increments training times
 
-        self.model.train()
+        self.model.train()  #
 
         total_loss = []
         total_acc = []
-        
-        #for epoch in tqdm(range(self.epoch_size)):
+
         for epoch in range(self.epoch_size):
             epoch_loss = []
             epoch_acc = []
             
             for i, batch in enumerate(self.train_data):
-                self.optimizer.zero_grad() 
+                #Forward
+                self.optimizer.zero_grad()
 
                 batch_size = len(batch.text[0])
-                pred = self.model(batch.text[0],batch_size)
-                loss = functional.cross_entropy(pred, batch.label, size_average=False)            
-                correct = ((torch.max(pred, 1)[1] == batch.label)).sum().numpy()
+                y_pred = self.model(batch.text[0], batch_size)
+                loss = coref_loss(NE_LABEL, y_pred, y_target) #size_average=False       not too sure why this was here before
+                correct = ((torch.max(pred, 1)[1] == y_target)).sum().numpy()
                 acc = correct/pred.shape[0]
-                
+
                 epoch_loss.append(loss.item())
                 epoch_acc.append(acc)
-         
+                #Backward
                 loss.backward() # calculate the gradient
             
                 # Clip to the gradient to avoid exploding gradient.
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
                 #clip_gradient(model, 0.25) # limit the norm
 
-                self.optimizer.step() # update param
+                #Optimize - update
+                self.optimizer.step()
 
                 print("------TRAINBatch {}/{}, Batch Loss: {:.4f}, Accuracy: {:.4f}".format(i+1,len(self.train_data), loss, acc))
             
@@ -85,8 +90,8 @@ class model_train(object):
 
         for i, batch in enumerate(self.valid_data):
             batch_size = len(batch.text[0])
-            pred = model(batch.text[0],batch_size)
-            loss = functional.cross_entropy(pred, batch.label, size_average=False)            
+            y_pred = model(batch.text[0], batch_size)
+            loss = coref_loss(NE_LABEL, y_pred, y_target)
             correct = ((torch.max(pred, 1)[1] == batch.label)).sum().numpy()
             acc = correct/pred.shape[0]
             total_loss.append(loss.item())
