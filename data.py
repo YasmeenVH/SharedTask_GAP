@@ -42,16 +42,16 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
         TEXT = data.Field(sequential=True, tokenize=tokenize, include_lengths=True, batch_first=True,
                           dtype=torch.long)
-        PRONOUN = data.Field(sequential=False, batch_first=True,tokenize=None)
+        PRONOUN = data.Field(sequential=False, batch_first=True)
         P_OFFSET = data.Field(sequential=False, batch_first=True)
-        A = data.Field(sequential=False, batch_first=True, tokenize=None)
-        B = data.Field(sequential=False, batch_first=True, tokenize=None)
+        A = data.Field(sequential=False, batch_first=True)
+        B = data.Field(sequential=False, batch_first=True)
         A_OFFSET = data.Field(sequential=False, batch_first=True)
         B_OFFSET = data.Field(sequential=False, batch_first=True)
         A_COREF = data.Field(sequential=False, batch_first=True)
         B_COREF = data.Field(sequential=False, batch_first=True)
         
-        NE_LABEL = data.LabelField(batch_first=True, sequential=False, tokenize=None)
+        NE_LABEL = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
 
 
         input_fields = [
