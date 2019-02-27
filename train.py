@@ -55,7 +55,8 @@ class model_train(object):
 
                 batch_size = len(batch.text[0])
                 y_pred = self.model(batch.text[0], batch_size)
-                loss = coref_loss(NE_LABEL, y_pred, y_target) #size_average=False       not too sure why this was here before
+                y_target = self.B
+                loss = coref_loss.b_loss(NE_LABEL, y_pred, y_target) #size_average=False       not too sure why this was here before
                 correct = ((torch.max(pred, 1)[1] == y_target)).sum().numpy()
                 acc = correct/pred.shape[0]
 
