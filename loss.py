@@ -23,14 +23,15 @@ class coref_loss(nn.Module):
         else
             y_true = Self.NE_LABEL.vocab.stoi[target.B]
         """
-        return pass
+        #return pass
 
-    def __call__(self):
+    #def __call__(self):
         return self.bce_loss(self.y_pred[0][2], self.y_true[0][2])
 
 
 
 # CARO
+"""
 class multiClassHingeLoss(nn.Module):
     def __init__(self, p=1, margin=1, weight=None, size_average=True):
         super(multiClassHingeLoss, self).__init__()
@@ -58,3 +59,4 @@ class multiClassHingeLoss(nn.Module):
         if(self.size_average):
             loss/=output.size()[0]
         return loss
+"""
