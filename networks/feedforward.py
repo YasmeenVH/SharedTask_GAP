@@ -15,5 +15,5 @@ class feedforward_nn(nn.Module):
         hidden = self.fc1(x)
         relu = self.relu(hidden)
         output = self.fc2(relu)
-        output = self.sigmoid(output)
-        return output
+        y_pred = self.sigmoid(output)
+        return y_pred
