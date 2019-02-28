@@ -10,5 +10,5 @@ class SVM(nn.Module):
         torch.nn.init.constant(self.fc.bias, 0.1)
 
     def forward(self, x):
-        output = self.fc(x)
-        return output
+        y_pred = self.fc(x)
+        return y_pred
