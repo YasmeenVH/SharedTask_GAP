@@ -15,7 +15,7 @@ class coref_loss(nn.Module):
         self.y_target = [(y_target.A, y_target.A_off, y_target.A_coref),
                         (y_target.B, y_target.B_off, y_target.B_coref)]
 
-    def b_loss(self, pred, target):
+    def b_loss(self):
         """
         y_true = 0
         if target.A_coref:
@@ -24,8 +24,6 @@ class coref_loss(nn.Module):
             y_true = Self.NE_LABEL.vocab.stoi[target.B]
         """
         #return pass
-
-    #def __call__(self):
         return self.bce_loss(self.y_pred[0][2], self.y_true[0][2])
 
 
