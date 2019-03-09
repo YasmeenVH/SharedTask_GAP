@@ -1,14 +1,7 @@
 import os
 import torch
 import torch.nn
-import pandas as pd
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.autograd import Variable
-import nltk
+
 from nltk.tokenize import word_tokenize
 from torchtext import data
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -16,14 +9,7 @@ from torchtext.vocab import GloVe, Vectors
 import re
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
-"""
-def tokenization(self):
-    tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
-    # clean_data = re.sub(r'[^\w\s]','', TEXT) # remove punctuation
-    # clean_data = clean_data.lower() # convert to lower case
-    # clean_data = [lemmatizer.lemmatize(x) for x in (clean_data)]
-    return tokenize
-"""
+
 
 class GapDataset(object):  # one seperate object, formal way to declare object
 
