@@ -1,14 +1,7 @@
 import os
 import torch
 import torch.nn
-import pandas as pd
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.autograd import Variable
-import nltk
+
 from nltk.tokenize import word_tokenize
 from torchtext import data
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -16,14 +9,7 @@ from torchtext.vocab import GloVe, Vectors
 import re
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
-"""
-def tokenization(self):
-    tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
-    # clean_data = re.sub(r'[^\w\s]','', TEXT) # remove punctuation
-    # clean_data = clean_data.lower() # convert to lower case
-    # clean_data = [lemmatizer.lemmatize(x) for x in (clean_data)]
-    return tokenize
-"""
+
 
 class GapDataset(object):  # one seperate object, formal way to declare object
 
@@ -77,7 +63,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         ##MAP WORDS & FIGURE OUT THE MAX SIZE FOR BUILDING VOCAB
 
         TEXT.build_vocab(train, max_size=30000, vectors=GloVe(name='6B', dim=300))  # Glove Embedding
-        PRONOUN.build_vocab(train.PRONOUN)
+        PRONOUN.build_vocab(train)
 
         # NE emb
         list_of_A = [x for x in train.A]
@@ -86,8 +72,8 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         NE_LABEL.build_vocab(AB_concat)
 
         word_emb = TEXT.vocab.vectors
-        pro_emb = PRONOUN.vocab.vectors
-        NE_emb = NE_LABEL.vocab.vectors
+        #pro_emb = PRONOUN.vocab.vectors
+        #NE_emb = NE_LABEL.vocab.vectors
         vocab_size = len(TEXT.vocab)
         
         # if want to use bucket iterator (batching)
@@ -103,5 +89,5 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         
         
         
-        return TEXT, PRONOUN, NE_LABEL, word_emb, pro_emb, NE_emb, train_data, valid_data, test_data, train, valid, test
+        return TEXT, PRONOUN, NE_LABEL, word_emb, train_data, valid_data, test_data, train, valid, test
 
