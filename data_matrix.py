@@ -25,25 +25,17 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         self.lemmatizer = WordNetLemmatizer()
 
 
-    # create one_hot encoding vector for pronouns/target names
-    # not done yet
-    #n = longest sent
-
-
-
-    # which_word : P, A, B
+    # which_word : P, A, B in str
     def make_one_hot(tok_input, untok_input, which_word): 
         idx = 0
 
         one_hot = []
         for a, b in zip(tok_input, untok_input):
             offset = 0
-            #print("%%%% HELLO", idx)
+
             if which_word == 'P':
                 offset = int(a.Pronoun_off)
                 this_word = a.Pronoun.translate(str.maketrans('', '', string.punctuation))
-
-                #print(this_word)
 
             elif which_Word == 'A':
                 offset = int(a.A_off)
@@ -60,14 +52,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             found_idx = 0
             found = False
 
-            #print(a.Text)
-            #print(b.Text)
-
-
-            #print(pre_word, this_word, next_word)
-
-
-
 
             pre_off = offset-2
             next_off = offset+len(this_word)+1
@@ -80,22 +64,17 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                     pre_off -= 1
 
             # find the next word
-            #print("^^ ", offset, next_off, len(b.Text))
             if (next_off != (len(b.Text))):
                 while (b.Text[next_off] != ' ' and next_off != len(b.Text)-1):
-                    #print("__",next_off)
                     if next_off == len(b.Text):
                         break
                     next_word = next_word + b.Text[next_off]
                     next_off += 1
-                #print(pre_word, this_word, next_word)
 
             pre_word = pre_word.translate(str.maketrans('', '', string.punctuation))
             next_word = next_word.translate(str.maketrans('', '', string.punctuation))
             
             
-            #print(pre_word, this_word, next_word)
-
             # find the right idx for the word
             for w in word_candidates:
                 if (((pre_word == '') and (a.Text[w+1] == next_word))
@@ -106,7 +85,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
             # if the word doesn't exist or error in data point, skip it
             if found == False:
-                #print('WORD NOT FOUND IN THE LIST')
                 continue
 
 
