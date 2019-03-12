@@ -7,6 +7,7 @@ from torchtext import data
 from nltk.stem.wordnet import WordNetLemmatizer
 from torchtext.vocab import GloVe, Vectors
 import re
+import string
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
 
@@ -26,78 +27,113 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
     # create one_hot encoding vector for pronouns/target names
     # not done yet
-    def one_hot(self, train, temp): 
-        #n = longest sent
-
-        for a, b in zip(train, temp):
-            
-            offset = int(a.Pronoun_off)
-            pro_candidates = [index for index, value in enumerate(a.Text) if value == 'her'] # indicies for the same words
-            found_idx = 0
-            found = False
-            
-            print(a.Text)
-            print(b.Text)
-            
+    #n = longest sent
 
 
-            print(offset)
 
-            pre_temp = offset-2
-            next_temp = offset+len(a.Pronoun)+1
+    # which_word : P, A, B
+    def make_one_hot(tok_input, untok_input, which_word): 
+        idx = 0
 
-            print(pre_temp)
-            print(b.Text[pre_temp])
+        one_hot = []
+        for a, b in zip(tok_input, untok_input):
+            offset = 0
+            #print("%%%% HELLO", idx)
+            if which_word == 'P':
+                offset = int(a.Pronoun_off)
+                this_word = a.Pronoun.translate(str.maketrans('', '', string.punctuation))
+
+                #print(this_word)
+
+            elif which_Word == 'A':
+                offset = int(a.A_off)
+                this_word = a.A.translate(str.maketrans('', '', string.punctuation))
+
+            else:
+                offset = int(a.B_off)
+                this_word = a.B.translate(str.maketrans('', '', string.punctuation))
 
             pre_word = ''
             next_word = ''
-            this_word = a.Pronoun
+
+            word_candidates = [index for index, value in enumerate(a.Text) if value == this_word] # indicies for the same words
+            found_idx = 0
+            found = False
+
+            #print(a.Text)
+            #print(b.Text)
+
+
+            #print(pre_word, this_word, next_word)
+
+
+
+
+            pre_off = offset-2
+            next_off = offset+len(this_word)+1
+
 
             # find the previous word
             if offset != 0:
-                while b.Text[pre_temp] != ' ':
-                    pre_word = b.Text[pre_temp]+ pre_word
-                    pre_temp -= 1
-                    
+                while b.Text[pre_off] != ' ':
+                    pre_word = b.Text[pre_off]+ pre_word
+                    pre_off -= 1
+
             # find the next word
-            if (offset+len(a.Pronoun)-1) != (len(a.Text)-1):
-                while b.Text[next_temp] != ' ':
-                    next_word = next_word + b.Text[next_temp]
-                    next_temp += 1
-                print(pre_word, this_word, next_word)
-                
+            #print("^^ ", offset, next_off, len(b.Text))
+            if (next_off != (len(b.Text))):
+                while (b.Text[next_off] != ' ' and next_off != len(b.Text)-1):
+                    #print("__",next_off)
+                    if next_off == len(b.Text):
+                        break
+                    next_word = next_word + b.Text[next_off]
+                    next_off += 1
+                #print(pre_word, this_word, next_word)
+
+            pre_word = pre_word.translate(str.maketrans('', '', string.punctuation))
+            next_word = next_word.translate(str.maketrans('', '', string.punctuation))
+            
+            
+            #print(pre_word, this_word, next_word)
+
             # find the right idx for the word
-            for w in pro_candidates:
-                if (((a.Text[w-1] == pre_word) and (a.Text[w+1] == next_word))
-                or ((pre_word == '') and (a.Text[w+1] == next_word))
-                or ((a.Text[w-1] == pre_word) and (next_word == ''))):
+            for w in word_candidates:
+                if (((pre_word == '') and (a.Text[w+1] == next_word))
+                or ((a.Text[w-1] == pre_word) and (next_word == ''))
+                or ((a.Text[w-1] == pre_word and (a.Text[w+1] == next_word)))):
                     found_idx = w
                     found = True
-            
-            # if the word doesn't exist terminate the program
+
+            # if the word doesn't exist or error in data point, skip it
             if found == False:
-                raise Exception('WORD NOT FOUND IN THE LIST')
-                exit()
-                
-                
-            print(a.Text[found_idx-1])
-                
-            
+                #print('WORD NOT FOUND IN THE LIST')
+                continue
+
+
             # create a list one-hot encoding list for the word (ie. [0,0,0,...,1,0,0])
-            pro_list = [0] * len(a.Text)
-            pro_list[found_idx] = 1
-                    
+            word_list = [0] * len(a.Text)
+            word_list[found_idx] = 1
+            one_hot.append(word_list)
+            idx += 1
             
-            break
+        return one_hot
 
-            return None
+        
 
 
+    def tokenizer(x):
+        tok = nltk.word_tokenize(x)
+        out = []
+        for w in tok:
+            temp = re.sub(r'<.*?>|[^\w\s]', '', (w))
+            if temp != '':
+                out.append(temp)
+        return out
 
     def loader(self):
-        tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
+        #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
 
-        TEXT = data.Field(sequential=True, tokenize=tokenize, include_lengths=True, batch_first=True,
+        TEXT = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
                           dtype=torch.long)
         PRONOUN = data.Field(sequential=False, batch_first=True)
         P_OFFSET = data.Field(sequential=False, batch_first=True)
