@@ -51,6 +51,15 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         return padded_lst, pad_checker
 
 
+
+    def find_subLst(s,l):
+        out = []
+        len_sub_lst=len(s)
+        for idx in (i for i,e in enumerate(l) if e==s[0]):
+            if l[idx:idx+len_sub_lst]==s:
+                out.append((idx,idx+len_sub_lst-1))
+        return out
+        
     # Make one-hot 1d vector for "pronoun, A, B" -- turn it into dim(300x1)
     """
         tok_input = train from loader()
@@ -63,29 +72,56 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         one_hot = []
         for a, b in zip(tok_input, untok_input):
             offset = 0
-
+            #print("%%%% HELLO", idx)
             if which_word == 'P':
                 offset = int(a.Pronoun_off)
                 this_word = a.Pronoun.translate(str.maketrans('', '', string.punctuation))
+                test = tokenizer(this_word)
+                print(this_word)
+                print("%%%", test)
+                
+                #print(this_word)
 
-            elif which_Word == 'A':
+            elif which_word == 'A':
                 offset = int(a.A_off)
                 this_word = a.A.translate(str.maketrans('', '', string.punctuation))
+                test = tokenizer(this_word)
+                print(this_word)
+                print("%%%", test)
 
             else:
                 offset = int(a.B_off)
                 this_word = a.B.translate(str.maketrans('', '', string.punctuation))
+                test = tokenizer(this_word)
 
+                
             pre_word = ''
             next_word = ''
+            print(a.Text)
 
-            word_candidates = [index for index, value in enumerate(a.Text) if value == this_word] # indicies for the same words
+            
+            
+            word_candidates = find_subLst(test, a.Text) 
+            
+    #        word_candidates = [index for index, value in enumerate(a.Text) if value in test] # indicies for the same words
+            print("____word_cand", word_candidates)
+            
+            
             found_idx = 0
             found = False
 
+            #print(a.Text)
+            #print(b.Text)
+
+
+            #print(pre_word, this_word, next_word)
+            count_len_name =0 
+            count_len_name = sum([count_len_name + len(i) for i in test]) + len(test) -1
+
+            
 
             pre_off = offset-2
-            next_off = offset+len(this_word)+1
+            next_off = offset+count_len_name+1
 
 
             # find the previous word
@@ -95,33 +131,43 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                     pre_off -= 1
 
             # find the next word
+            #print("^^ ", offset, next_off, len(b.Text))
             if (next_off != (len(b.Text))):
                 while (b.Text[next_off] != ' ' and next_off != len(b.Text)-1):
+                    #print("__",next_off)
                     if next_off == len(b.Text):
                         break
                     next_word = next_word + b.Text[next_off]
                     next_off += 1
+                print(pre_word, this_word, next_word)
 
             pre_word = pre_word.translate(str.maketrans('', '', string.punctuation))
             next_word = next_word.translate(str.maketrans('', '', string.punctuation))
             
             
+            #print(pre_word, this_word, next_word)
+
             # find the right idx for the word
             for w in word_candidates:
-                if (((pre_word == '') and (a.Text[w+1] == next_word))
-                or ((a.Text[w-1] == pre_word) and (next_word == ''))
-                or ((a.Text[w-1] == pre_word and (a.Text[w+1] == next_word)))):
+                if (((pre_word == '') and (a.Text[w[1]+1] == next_word))
+                or ((a.Text[w[0]-1] == pre_word) and (next_word == ''))
+                or ((a.Text[w[0]-1] == pre_word and (a.Text[w[1]+1] == next_word)))):
                     found_idx = w
                     found = True
-
+            print(found_idx)
             # if the word doesn't exist or error in data point, skip it
             if found == False:
+                print('===WORD NOT FOUND IN THE LIST', pre_word, this_word, next_word)
+                #print('===',a.Text)
+                #print('===',b.Text)
                 continue
 
 
             # create a list one-hot encoding list for the word (ie. [0,0,0,...,1,0,0])
             word_list = [0] * len(a.Text)
-            word_list[found_idx] = 1
+            for i in range(found_idx[0],found_idx[1]+1):  word_list[i] = 1
+                
+            #word_list[found_idx] = 1
             one_hot.append(word_list)
             idx += 1
             
