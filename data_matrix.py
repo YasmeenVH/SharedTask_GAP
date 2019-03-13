@@ -24,8 +24,39 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         #self.tokenization = tokenization(self)  # initialization of tokenization is optional since tokenization is global
         self.lemmatizer = WordNetLemmatizer()
 
+    """
+        name_dict = NE_LABEL
+        tok_input = train
 
-    # which_word : P, A, B in str
+        returns a list containing name list of each data point
+        use this to create a new name_emb size 300x1
+    """
+    def name_lst(name_dict, tok_input):
+        name_emb_lst = []
+        name_lst = [name_dict.vocab.itos[i] for i in range(0,len(name_dict.vocab))]
+        for x in tok_input.Text:
+            each = [item for item in x if item in name_lst]
+            name_emb_lst.append(each)
+        return name_emb_lst
+
+
+    # input is one-hot-vector from make_one_hot()
+    # turn it into dim(300x1)
+    def pad_zero(lst):
+        N = [len(i) for i in lst]
+        N = (max(N))
+        padded_lst = [(i + N * [0])[:N] for i in lst]
+        pad_checker = [len(i) * [1] for i in lst]
+        pad_checker = [(i + N * [0])[:N] for i in pad_checker]
+        return padded_lst, pad_checker
+
+
+    # Make one-hot 1d vector for "pronoun, A, B" -- turn it into dim(300x1)
+    """
+        tok_input = train from loader()
+        untok_input = temp from loader()
+        which_word : 'P', 'A', 'B' in str
+    """
     def make_one_hot(tok_input, untok_input, which_word): 
         idx = 0
 
@@ -98,7 +129,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
         
 
-
+    # NEED TO EDIT: DONT TOKENIZE THE TARGET NAMES A B
     def tokenizer(x):
         tok = nltk.word_tokenize(x)
         out = []
@@ -108,6 +139,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 out.append(temp)
         return out
 
+
+
+    # NEED TO EDIT: TAKE OUT NAME LOADER AND MAKE INTO A SEPARATE METHOD
     def loader(self):
         #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
 
