@@ -59,7 +59,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             if l[idx:idx+len_sub_lst]==s:
                 out.append((idx,idx+len_sub_lst-1))
         return out
-        
+
     # Make one-hot 1d vector for "pronoun, A, B" -- turn it into dim(300x1)
     """
         tok_input = train from loader()
@@ -77,8 +77,8 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 offset = int(a.Pronoun_off)
                 this_word = a.Pronoun.translate(str.maketrans('', '', string.punctuation))
                 test = tokenizer(this_word)
-                print(this_word)
-                print("%%%", test)
+                #print(this_word)
+                #print("%%%", test)
                 
                 #print(this_word)
 
@@ -86,8 +86,8 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 offset = int(a.A_off)
                 this_word = a.A.translate(str.maketrans('', '', string.punctuation))
                 test = tokenizer(this_word)
-                print(this_word)
-                print("%%%", test)
+                #print(this_word)
+                #print("%%%", test)
 
             else:
                 offset = int(a.B_off)
@@ -97,14 +97,14 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 
             pre_word = ''
             next_word = ''
-            print(a.Text)
+            #print(a.Text)
 
             
             
             word_candidates = find_subLst(test, a.Text) 
             
     #        word_candidates = [index for index, value in enumerate(a.Text) if value in test] # indicies for the same words
-            print("____word_cand", word_candidates)
+            #print("____word_cand", word_candidates)
             
             
             found_idx = 0
@@ -126,24 +126,32 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
             # find the previous word
             if offset != 0:
-                while b.Text[pre_off] != ' ':
+                while (b.Text[pre_off] != ' ' and b.Text[pre_off] not in string.punctuation):
                     pre_word = b.Text[pre_off]+ pre_word
+                    if pre_off == 0:
+                        break
                     pre_off -= 1
 
             # find the next word
             #print("^^ ", offset, next_off, len(b.Text))
+            
             if (next_off != (len(b.Text))):
-                while (b.Text[next_off] != ' ' and next_off != len(b.Text)-1):
+                while (b.Text[next_off] != ' ' and  b.Text[next_off] not in string.punctuation):
+
                     #print("__",next_off)
-                    if next_off == len(b.Text):
-                        break
+
                     next_word = next_word + b.Text[next_off]
                     next_off += 1
-                print(pre_word, this_word, next_word)
+                    if next_off == len(b.Text):
+                        break
+                #print(pre_word, this_word, next_word)
 
             pre_word = pre_word.translate(str.maketrans('', '', string.punctuation))
             next_word = next_word.translate(str.maketrans('', '', string.punctuation))
             
+            nt_lst = ["isn","aren","wasn","weren", "hasn","haven","hadn","wouldn", "don", "doesn", "didn"]
+            if next_word in nt_lst:
+                next_word = next_word[0:len(next_word)-1]
             
             #print(pre_word, this_word, next_word)
 
@@ -154,12 +162,14 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 or ((a.Text[w[0]-1] == pre_word and (a.Text[w[1]+1] == next_word)))):
                     found_idx = w
                     found = True
-            print(found_idx)
+            #print(found_idx)
             # if the word doesn't exist or error in data point, skip it
             if found == False:
-                print('===WORD NOT FOUND IN THE LIST', pre_word, this_word, next_word)
-                #print('===',a.Text)
-                #print('===',b.Text)
+                word_list = [0] * len(a.Text)
+                one_hot.append(word_list)
+                #print('===WORD NOT FOUND IN THE LIST', pre_word, this_word, next_word)
+                #print(a.Text)
+                #print(b.Text)
                 continue
 
 
@@ -173,21 +183,22 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             
         return one_hot
 
+
         
 
-    # NEED TO EDIT: DONT TOKENIZE THE TARGET NAMES A B
     def tokenizer(x):
+        x = re.sub(r"\.", ' ', x)
+        x = re.sub("-", ' ', x)
         tok = nltk.word_tokenize(x)
         out = []
         for w in tok:
-            temp = re.sub(r'<.*?>|[^\w\s]', '', (w))
+            temp = re.sub(r"[^\w\s]|^[\']", '', w)
             if temp != '':
                 out.append(temp)
         return out
 
 
 
-    # NEED TO EDIT: TAKE OUT NAME LOADER AND MAKE INTO A SEPARATE METHOD
     def loader(self):
         #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
 
