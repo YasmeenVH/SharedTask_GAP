@@ -8,6 +8,8 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from torchtext.vocab import GloVe, Vectors
 import re
 import string
+import numpy as np
+
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
 
@@ -23,6 +25,17 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         self.batch_size = batch_size
         #self.tokenization = tokenization(self)  # initialization of tokenization is optional since tokenization is global
         self.lemmatizer = WordNetLemmatizer()
+
+
+    def extend_dim(data, dim):
+        new_data = []
+        temp_data = []
+        for x in data:
+            [temp_data.append([i] * dim) for i in x]
+            new_data.append(temp_data)
+            temp_data = []
+        return new_data
+        
 
     """
         name_dict = NE_LABEL
@@ -52,13 +65,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
 
 
-    def find_subLst(s,l):
-        out = []
-        len_sub_lst=len(s)
-        for idx in (i for i,e in enumerate(l) if e==s[0]):
-            if l[idx:idx+len_sub_lst]==s:
-                out.append((idx,idx+len_sub_lst-1))
-        return out
+
 
     # Make one-hot 1d vector for "pronoun, A, B" -- turn it into dim(300x1)
     """
@@ -66,125 +73,78 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         untok_input = temp from loader()
         which_word : 'P', 'A', 'B' in str
     """
+    def find_subLst(s,l): # helper: find the subset list of the original list
+        out = []
+        len_sub_lst=len(s)
+        for idx in (i for i,e in enumerate(l) if e==s[0]):
+            if l[idx:idx+len_sub_lst]==s:
+                out.append((idx,idx+len_sub_lst-1))
+        return out
+
+    def cumul_tok(x): # helper: builds a cumulated length of tokenized data
+        tokenized = []
+        temp = ''
+        print(x)
+        for i in x:
+            temp = temp + i
+            if i == ' ':
+                tokenized.append(temp)
+                temp = ''
+        return tokenized
+
+
     def make_one_hot(tok_input, untok_input, which_word): 
         idx = 0
-
         one_hot = []
         for a, b in zip(tok_input, untok_input):
-            offset = 0
-            #print("%%%% HELLO", idx)
+            #print("___INDEX: ",idx)
+            #print(b.Text)
+            
             if which_word == 'P':
                 offset = int(a.Pronoun_off)
                 this_word = a.Pronoun.translate(str.maketrans('', '', string.punctuation))
                 test = tokenizer(this_word)
-                #print(this_word)
-                #print("%%%", test)
-                
-                #print(this_word)
 
             elif which_word == 'A':
                 offset = int(a.A_off)
                 this_word = a.A.translate(str.maketrans('', '', string.punctuation))
                 test = tokenizer(this_word)
-                #print(this_word)
-                #print("%%%", test)
 
             else:
                 offset = int(a.B_off)
                 this_word = a.B.translate(str.maketrans('', '', string.punctuation))
                 test = tokenizer(this_word)
-
-                
-            pre_word = ''
-            next_word = ''
-            #print(a.Text)
-
             
+            #print(test)
+            #print(offset)
+            word_candidates = find_subLst(test, a.Text)
+            #word_cand = find_subLst(test, )
+            cumul_token = cumul_tok(b.Text)
+            cumulator = [len(x) for x in cumul_token]
+            cumulator = np.cumsum(cumulator)
+            this = np.where(cumulator == offset)[0]
+            #print(this_word)
+            #print("%%%%",this)
+           # te = [i[0] for i in word_candidates]
+            find_closest = lambda y,lst:min(lst,key=lambda x:abs(x-y))
+            print(word_candidates)
+            if len(word_candidates)!=0:
+                found = find_closest(this, [i[0] for i in word_candidates])
             
-            word_candidates = find_subLst(test, a.Text) 
-            
-    #        word_candidates = [index for index, value in enumerate(a.Text) if value in test] # indicies for the same words
-            #print("____word_cand", word_candidates)
-            
-            
-            found_idx = 0
-            found = False
-
-            #print(a.Text)
-            #print(b.Text)
-
-
-            #print(pre_word, this_word, next_word)
-            count_len_name =0 
-            count_len_name = sum([count_len_name + len(i) for i in test]) + len(test) -1
-
-            
-
-            pre_off = offset-2
-            next_off = offset+count_len_name+1
-
-
-            # find the previous word
-            if offset != 0:
-                while (b.Text[pre_off] != ' ' and b.Text[pre_off] not in string.punctuation):
-                    pre_word = b.Text[pre_off]+ pre_word
-                    if pre_off == 0:
-                        break
-                    pre_off -= 1
-
-            # find the next word
-            #print("^^ ", offset, next_off, len(b.Text))
-            
-            if (next_off != (len(b.Text))):
-                while (b.Text[next_off] != ' ' and  b.Text[next_off] not in string.punctuation):
-
-                    #print("__",next_off)
-
-                    next_word = next_word + b.Text[next_off]
-                    next_off += 1
-                    if next_off == len(b.Text):
-                        break
-                #print(pre_word, this_word, next_word)
-
-            pre_word = pre_word.translate(str.maketrans('', '', string.punctuation))
-            next_word = next_word.translate(str.maketrans('', '', string.punctuation))
-            
-            nt_lst = ["isn","aren","wasn","weren", "hasn","haven","hadn","wouldn", "don", "doesn", "didn"]
-            if next_word in nt_lst:
-                next_word = next_word[0:len(next_word)-1]
-            
-            #print(pre_word, this_word, next_word)
-
-            # find the right idx for the word
-            for w in word_candidates:
-                if (((pre_word == '') and (a.Text[w[1]+1] == next_word))
-                or ((a.Text[w[0]-1] == pre_word) and (next_word == ''))
-                or ((a.Text[w[0]-1] == pre_word and (a.Text[w[1]+1] == next_word)))):
-                    found_idx = w
-                    found = True
-            #print(found_idx)
-            # if the word doesn't exist or error in data point, skip it
-            if found == False:
-                word_list = [0] * len(a.Text)
-                one_hot.append(word_list)
-                #print('===WORD NOT FOUND IN THE LIST', pre_word, this_word, next_word)
-                #print(a.Text)
-                #print(b.Text)
-                continue
-
-
-            # create a list one-hot encoding list for the word (ie. [0,0,0,...,1,0,0])
+            #print("FOUND: ", found)
             word_list = [0] * len(a.Text)
-            for i in range(found_idx[0],found_idx[1]+1):  word_list[i] = 1
-                
-            #word_list[found_idx] = 1
-            one_hot.append(word_list)
-            idx += 1
+
+            for w in word_candidates:
+                #print("W_0: ", w[0])
+                if w[0]==found:
+                    #print("!!@@!@!")
+                    for i in range(w[0],w[1]+1):  word_list[i] = 1
             
+            one_hot.append(word_list)
+
         return one_hot
+            
 
-
-        
 
     def tokenizer(x):
         x = re.sub(r"\.", ' ', x)
