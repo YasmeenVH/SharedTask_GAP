@@ -27,15 +27,26 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         self.lemmatizer = WordNetLemmatizer()
 
 
-    def extend_dim(data, dim):
-        new_data = []
-        temp_data = []
-        for x in data:
-            [temp_data.append([i] * dim) for i in x]
-            new_data.append(temp_data)
-            temp_data = []
-        return new_data
-        
+    # Input: TEXT, train
+    def text_emb(TEXT, tok_input):
+        zero = TEXT.vocab.vectors[TEXT.vocab.stoi["<UNK>"]]
+        N = len(max((l.Text) for l in tok_input))
+        entire_emb = []
+        #pad_checker = []
+        data_emb = []
+        for data in tok_input:
+            for i in data.Text:
+                data_emb.append(TEXT.vocab.vectors[TEXT.vocab.stoi[i]])
+            #print(N-len(data_emb))
+            padded_lst = data_emb + [TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']]] * (N-len(data_emb))
+            #print("^^", padded_lst)
+            entire_emb.append(padded_lst)
+            data_emb = []
+            
+            pad = [len(i) * [1] for i in tok_input.Text]
+            pad_checker = [(i + N * [0])[:N] for i in pad]
+        return entire_emb, pad_checker
+
 
     """
         name_dict = NE_LABEL
@@ -50,7 +61,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         for x in tok_input.Text:
             each = [item for item in x if item in name_lst]
             name_emb_lst.append(each)
-        return name_emb_lst
+        max_len = len(max(name_emb_lst, key=lambda x: len(x)))
+
+        return name_emb_lst, max_len
 
 
     # input is one-hot-vector from make_one_hot()
@@ -64,6 +77,16 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         return padded_lst, pad_checker
 
 
+    # turns 1d vector to ((dim*1)*n)
+    def extend_dim(data, dim):
+        new_data = []
+        temp_data = []
+        for x in data:
+            [temp_data.append([i] * dim) for i in x]
+            new_data.append(temp_data)
+            temp_data = []
+        return new_data
+        
 
 
 
@@ -154,7 +177,10 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         for w in tok:
             temp = re.sub(r"[^\w\s]|^[\']", '', w)
             if temp != '':
-                out.append(temp)
+                out.append(temp.lower())
+        for i in range(0, len(out)):
+            if out[i].isdigit():
+                out[i] = "<num>"
         return out
 
 
