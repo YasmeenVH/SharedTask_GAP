@@ -30,7 +30,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
     # Input: TEXT, train
     def text_emb(TEXT, tok_input):
         zero = TEXT.vocab.vectors[TEXT.vocab.stoi["<UNK>"]]
-        N = len(max((l.Text) for l in tok_input))
+        N = len(max(tok_input.Text, key=lambda x: len(x)))
         entire_emb = []
         #pad_checker = []
         data_emb = []
@@ -51,19 +51,46 @@ class GapDataset(object):  # one seperate object, formal way to declare object
     """
         name_dict = NE_LABEL
         tok_input = train
-
-        returns a list containing name list of each data point
-        use this to create a new name_emb size 300x1
     """
-    def name_lst(name_dict, tok_input):
+    def name_emb(name_dict, tok_input):
         name_emb_lst = []
+        embedding = []
         name_lst = [name_dict.vocab.itos[i] for i in range(0,len(name_dict.vocab))]
+        N = len(max(tok_input.Text, key=lambda x: len(x)))
+
         for x in tok_input.Text:
             each = [item for item in x if item in name_lst]
             name_emb_lst.append(each)
-        max_len = len(max(name_emb_lst, key=lambda x: len(x)))
-
-        return name_emb_lst, max_len
+        max_len = len(max(name_emb_lst, key=lambda x: len(x)))+1
+        temp = []
+        
+        pad_checker = [len(i) * [1] for i in name_emb_lst]
+        pad_checker = [(i + max_len * [0])[:max_len] for i in pad_checker]
+        
+        for data, names in zip(tok_input, name_emb_lst):
+            idx = 1
+            #print((data.Text))
+            for w in data.Text:
+                #print("^^^", w)
+                #print("+++", names)
+                if w in names:
+                    #print("___w: ", w)
+                    word_list = [0] * max_len
+                    word_list[idx] = 1
+                    idx += 1
+                else: 
+                    word_list = [0] * max_len
+                    word_list[0] = 1
+                temp.append(word_list)
+                #print(word_list)
+                
+            #print(temp)    
+            #print(temp + [[0] * max_len] * (N-len(data.Text)))
+            embedding.append(temp + [[0] * max_len] * (N-len(data.Text)))
+            temp = []
+            word_list = []
+            #print(embedding)
+        return embedding, pad_checker
 
 
     # input is one-hot-vector from make_one_hot()
