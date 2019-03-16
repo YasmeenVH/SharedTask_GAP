@@ -212,7 +212,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
 
 
-    def loader(self):
+    def load_first(self):
         #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
 
         TEXT = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
@@ -227,6 +227,25 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         B_COREF = data.Field(sequential=False, batch_first=True)
         
         NE_LABEL = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
+
+        TEMP_TEXT = data.Field(sequential=False, tokenize=None, include_lengths=True, batch_first=True,
+                          dtype=torch.long)
+        temp_fields = [
+            ('ID', None),
+            ('Text', TEMP_TEXT),
+            ('Pronoun', None),
+            ('Pronoun_off', None),
+            ('A', None),
+            ('A_off', None),
+            ('A_coref', None),
+            ('B', None),
+            ('B_off', None),
+            ('B_coref', None),
+            ('URL', None)        
+        ]
+        untok_train = data.TabularDataset(path=self.train_path, format='tsv', fields=temp_fields, skip_header=True)
+        untok_valid = data.TabularDataset(path=self.valid_path, format='tsv', fields=temp_fields, skip_header=True)
+        untok_test = data.TabularDataset(path=self.test_path, format='tsv', fields=temp_fields, skip_header=True)
 
 
         input_fields = [
@@ -247,63 +266,74 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         valid = data.TabularDataset(path=self.valid_path, format='tsv', fields=input_fields, skip_header=True)
         test = data.TabularDataset(path=self.test_path, format='tsv', fields=input_fields, skip_header=True)
 
-        TEMP_TEXT = data.Field(sequential=False, tokenize=None, include_lengths=True, batch_first=True,
-                          dtype=torch.long)
-        temp_fields = [
-            ('ID', None),
-            ('Text', TEMP_TEXT),
-            ('Pronoun', None),
-            ('Pronoun_off', None),
-            ('A', None),
-            ('A_off', None),
-            ('A_coref', None),
-            ('B', None),
-            ('B_off', None),
-            ('B_coref', None),
-            ('URL', None)        
-        ]
-        temp = data.TabularDataset(path=self.train_path, format='tsv', fields=temp_fields, skip_header=True)
-
-
-        ##MAP WORDS & FIGURE OUT THE MAX SIZE FOR BUILDING VOCAB
-
-        TEXT.build_vocab(train, max_size=30000, vectors=GloVe(name='6B', dim=300))  # Glove Embedding
-        PRONOUN.build_vocab(train)
-
-        # NE emb
-        list_of_A = [x for x in train.A]
-        list_of_B = [x for x in train.B]
-        AB_concat = list_of_A + list_of_B
-        NE_LABEL.build_vocab(AB_concat)
-
-        word_emb = TEXT.vocab.vectors
-        #pro_emb = PRONOUN.vocab.vectors
-        #NE_emb = NE_LABEL.vocab.vectors
-
-
-
-
-
-        vocab_size = len(TEXT.vocab)
-        
         # if want to use bucket iterator (batching)
         train_data, valid_data, test_data = data.BucketIterator.splits((train, valid, test),
                                                                        batch_size=self.batch_size,
                                                                        repeat=False, shuffle=True)
 
+
+        TEXT_train.build_vocab(train, max_size=30000, vectors=GloVe(name='6B', dim=300))  # Glove Embedding
+        list_of_A_train = [x for x in train.A]
+        list_of_B_train = [x for x in train.B]
+        AB_concat_train = list_of_A_train + list_of_B_train
+        NE_LABEL_train.build_vocab(AB_concat_train)
+
+
+        TEXT_valid.build_vocab(valid, max_size=30000, vectors=GloVe(name='6B', dim=300))  # Glove Embedding
+        list_of_A_valid = [x for x in valid.A]
+        list_of_B_valid = [x for x in valid.B]
+        AB_concat_valid = list_of_A_valid + list_of_B_valid
+        NE_LABEL_valid.build_vocab(AB_concat_valid)
+
+
+        TEXT_test.build_vocab(valid, max_size=30000, vectors=GloVe(name='6B', dim=300))  # Glove Embedding
+        list_of_A_test = [x for x in test.A]
+        list_of_B_test = [x for x in test.B]
+        AB_concat_test = list_of_A_test + list_of_B_test
+        NE_LABEL_test.build_vocab(AB_concat_test)
         
-        print ("Length of Text Vocabulary: " + str(len(TEXT.vocab)))
-        print ("Vector size of Text Vocabulary: ", TEXT.vocab.vectors.size())
-        print ("NE Length: " + str(len(NE_LABEL.vocab)))
+
+
+        
+
         print ("\nSize of train set: {} \nSize of validation set: {} \nSize of test set: {}".format(len(train_data.dataset), len(valid_data.dataset), len(test_data.dataset)))
         
         
         
-        return temp, TEXT, PRONOUN, NE_LABEL, word_emb, train_data, valid_data, test_data, train, valid, test
+        return TEXT_train, TEXT_valid,TEXT_test, 
+                NE_LABEL_train, NE_LABEL_valid,
+                NE_LABEL_test, train_data, valid_data,
+                test_data, train, valid, test,
+                untok_train, untok_valid, untok_test
+
+    def load(self, batching = True):
+
+        TEXT_train, TEXT_valid,TEXT_test,
+        NE_LABEL_train, NE_LABEL_valid, NE_LABEL_test,
+        _, _, _, 
+        train, valid, test, 
+        untok_train, untok_valid, untok_test = load_first()
 
 
+        train_out = text_emb(TEXT_train, train) +
+            name_emb(NE_LABEL_train, train) + 
+            extend_dim(pad_zero(make_one_hot(train, untok_train, 'P')), 300) +
+            extend_dim(pad_zero(make_one_hot(train, untok_train, 'A')), 300) +
+            extend_dim(pad_zero(make_one_hot(train, untok_train, 'B')), 300)
 
+        valid_out = text_emb(TEXT_valid, valid) +
+            name_emb(NE_LABEL_valid, valid) + 
+            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'P')), 300) +
+            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'A')), 300) +
+            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'B')), 300)
 
+        train_out = text_emb(TEXT_test, test_data) +
+            name_emb(NE_LABEL_test, test_data) + 
+            extend_dim(pad_zero(make_one_hot(test, untok_test, 'P')), 300) +
+            extend_dim(pad_zero(make_one_hot(test, untok_test, 'A')), 300) +
+            extend_dim(pad_zero(make_one_hot(test, untok_test, 'B')), 300)
+
+        return train_out.view(-1), valid_out.view(-1), test_out.view(-1)
 
 
 
