@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn
-
+import nltk
 from nltk.tokenize import word_tokenize
 from torchtext import data
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -9,10 +9,23 @@ from torchtext.vocab import GloVe, Vectors
 import re
 import string
 import numpy as np
-
+from itertools import chain
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
 
+def tokenizer(x):
+    x = re.sub(r"\.", ' ', x)
+    x = re.sub("-", ' ', x)
+    tok = nltk.word_tokenize(x)
+    out = []
+    for w in tok:
+        temp = re.sub(r"[^\w\s]|^[\']", '', w)
+        if temp != '':
+            out.append(temp.lower())
+    for i in range(0, len(out)):
+        if out[i].isdigit():
+            out[i] = "<num>"
+    return out
 
 class GapDataset(object):  # one seperate object, formal way to declare object
 
@@ -24,11 +37,12 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         self.valid_path = valid_path
         self.batch_size = batch_size
         #self.tokenization = tokenization(self)  # initialization of tokenization is optional since tokenization is global
-        self.lemmatizer = WordNetLemmatizer()
+        self.lemmatizer = WordNetLemmatizer()        
 
 
     # Input: TEXT, train
-    def text_emb(TEXT, tok_input):
+    #
+    def text_emb(self, TEXT, tok_input):
         zero = TEXT.vocab.vectors[TEXT.vocab.stoi["<UNK>"]]
         N = len(max(tok_input.Text, key=lambda x: len(x)))
         entire_emb = []
@@ -45,6 +59,11 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             
             pad = [len(i) * [1] for i in tok_input.Text]
             pad_checker = [(i + N * [0])[:N] for i in pad]
+
+        entire_emb = np.hstack(entire_emb)
+        print(entire_emb.shape)
+        pad_checker = np.hstack(np.array(pad_checker))
+
         return entire_emb, pad_checker
 
 
@@ -52,7 +71,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         name_dict = NE_LABEL
         tok_input = train
     """
-    def name_emb(name_dict, tok_input):
+    def name_emb(self, name_dict, tok_input):
         name_emb_lst = []
         embedding = []
         name_lst = [name_dict.vocab.itos[i] for i in range(0,len(name_dict.vocab))]
@@ -90,28 +109,36 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             temp = []
             word_list = []
             #print(embedding)
+
+        embedding = np.hstack(np.array(embedding))
+        pad_checker = np.hstack(np.array(pad_checker))
+        
         return embedding, pad_checker
 
 
     # input is one-hot-vector from make_one_hot()
     # turn it into dim(300x1)
-    def pad_zero(lst):
+    def pad_zero(self, lst):
         N = [len(i) for i in lst]
         N = (max(N))
         padded_lst = [(i + N * [0])[:N] for i in lst]
         pad_checker = [len(i) * [1] for i in lst]
         pad_checker = [(i + N * [0])[:N] for i in pad_checker]
+
+
         return padded_lst, pad_checker
 
 
     # turns 1d vector to ((dim*1)*n)
-    def extend_dim(data, dim):
+    def extend_dim(self, data, dim):
         new_data = []
         temp_data = []
         for x in data:
             [temp_data.append([i] * dim) for i in x]
             new_data.append(temp_data)
             temp_data = []
+
+        new_data = np.hstack(np.array(new_data))
         return new_data
         
 
@@ -123,7 +150,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         untok_input = temp from loader()
         which_word : 'P', 'A', 'B' in str
     """
-    def find_subLst(s,l): # helper: find the subset list of the original list
+    def find_subLst(self, s,l): # helper: find the subset list of the original list
         out = []
         len_sub_lst=len(s)
         for idx in (i for i,e in enumerate(l) if e==s[0]):
@@ -131,10 +158,10 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 out.append((idx,idx+len_sub_lst-1))
         return out
 
-    def cumul_tok(x): # helper: builds a cumulated length of tokenized data
+    def cumul_tok(self, x): # helper: builds a cumulated length of tokenized data
         tokenized = []
         temp = ''
-        print(x)
+        #print(x)
         for i in x:
             temp = temp + i
             if i == ' ':
@@ -143,7 +170,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         return tokenized
 
 
-    def make_one_hot(tok_input, untok_input, which_word): 
+    def make_one_hot(self, tok_input, untok_input, which_word): 
         idx = 0
         one_hot = []
         for a, b in zip(tok_input, untok_input):
@@ -167,9 +194,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             
             #print(test)
             #print(offset)
-            word_candidates = find_subLst(test, a.Text)
+            word_candidates = self.find_subLst(test, a.Text)
             #word_cand = find_subLst(test, )
-            cumul_token = cumul_tok(b.Text)
+            cumul_token = self.cumul_tok(b.Text)
             cumulator = [len(x) for x in cumul_token]
             cumulator = np.cumsum(cumulator)
             this = np.where(cumulator == offset)[0]
@@ -177,7 +204,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             #print("%%%%",this)
            # te = [i[0] for i in word_candidates]
             find_closest = lambda y,lst:min(lst,key=lambda x:abs(x-y))
-            print(word_candidates)
+            #print(word_candidates)
             if len(word_candidates)!=0:
                 found = find_closest(this, [i[0] for i in word_candidates])
             
@@ -195,28 +222,15 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         return one_hot
             
 
-
-    def tokenizer(x):
-        x = re.sub(r"\.", ' ', x)
-        x = re.sub("-", ' ', x)
-        tok = nltk.word_tokenize(x)
-        out = []
-        for w in tok:
-            temp = re.sub(r"[^\w\s]|^[\']", '', w)
-            if temp != '':
-                out.append(temp.lower())
-        for i in range(0, len(out)):
-            if out[i].isdigit():
-                out[i] = "<num>"
-        return out
-
-
-
     def load_first(self):
         #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
 
-        TEXT = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
+        TEXT_train = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
                           dtype=torch.long)
+        TEXT_valid = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
+                          dtype=torch.long)
+        TEXT_test = data.Field(sequential=True, tokenize=tokenizer, include_lengths=True, batch_first=True,
+                          dtype=torch.long)        
         PRONOUN = data.Field(sequential=False, batch_first=True)
         P_OFFSET = data.Field(sequential=False, batch_first=True)
         A = data.Field(sequential=False, batch_first=True)
@@ -226,7 +240,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         A_COREF = data.Field(sequential=False, batch_first=True)
         B_COREF = data.Field(sequential=False, batch_first=True)
         
-        NE_LABEL = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
+        NE_LABEL_train = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
+        NE_LABEL_valid = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
+        NE_LABEL_test = data.LabelField(batch_first=True, sequential=False)  #tokenize is removed since default is none
 
         TEMP_TEXT = data.Field(sequential=False, tokenize=None, include_lengths=True, batch_first=True,
                           dtype=torch.long)
@@ -248,9 +264,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         untok_test = data.TabularDataset(path=self.test_path, format='tsv', fields=temp_fields, skip_header=True)
 
 
-        input_fields = [
+        input_fields_train = [
             ('ID', None),
-            ('Text', TEXT),
+            ('Text', TEXT_train),
             ('Pronoun', PRONOUN),
             ('Pronoun_off', P_OFFSET),
             ('A', A),
@@ -261,10 +277,39 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             ('B_coref', B_COREF),
             ('URL', None)        
         ]
-        
-        train = data.TabularDataset(path=self.train_path, format='tsv', fields=input_fields, skip_header=True)
-        valid = data.TabularDataset(path=self.valid_path, format='tsv', fields=input_fields, skip_header=True)
-        test = data.TabularDataset(path=self.test_path, format='tsv', fields=input_fields, skip_header=True)
+
+        input_fields_valid = [
+            ('ID', None),
+            ('Text', TEXT_valid),
+            ('Pronoun', PRONOUN),
+            ('Pronoun_off', P_OFFSET),
+            ('A', A),
+            ('A_off', A_OFFSET),
+            ('A_coref', A_COREF),
+            ('B', A),
+            ('B_off', B_OFFSET),
+            ('B_coref', B_COREF),
+            ('URL', None)        
+        ]
+
+        input_fields_test = [
+            ('ID', None),
+            ('Text', TEXT_test),
+            ('Pronoun', PRONOUN),
+            ('Pronoun_off', P_OFFSET),
+            ('A', A),
+            ('A_off', A_OFFSET),
+            ('A_coref', A_COREF),
+            ('B', A),
+            ('B_off', B_OFFSET),
+            ('B_coref', B_COREF),
+            ('URL', None)        
+        ]
+
+
+        train = data.TabularDataset(path=self.train_path, format='tsv', fields=input_fields_train, skip_header=True)
+        valid = data.TabularDataset(path=self.valid_path, format='tsv', fields=input_fields_valid, skip_header=True)
+        test = data.TabularDataset(path=self.test_path, format='tsv', fields=input_fields_test, skip_header=True)
 
         # if want to use bucket iterator (batching)
         train_data, valid_data, test_data = data.BucketIterator.splits((train, valid, test),
@@ -300,40 +345,39 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         
         
         
-        return TEXT_train, TEXT_valid,TEXT_test, 
-                NE_LABEL_train, NE_LABEL_valid,
-                NE_LABEL_test, train_data, valid_data,
-                test_data, train, valid, test,
-                untok_train, untok_valid, untok_test
-
-    def load(self, batching = True):
-
-        TEXT_train, TEXT_valid,TEXT_test,
-        NE_LABEL_train, NE_LABEL_valid, NE_LABEL_test,
-        _, _, _, 
-        train, valid, test, 
-        untok_train, untok_valid, untok_test = load_first()
+        return TEXT_train, TEXT_valid,TEXT_test, NE_LABEL_train, NE_LABEL_valid, NE_LABEL_test, train_data, valid_data, test_data, train, valid, test, untok_train, untok_valid, untok_test
 
 
-        train_out = text_emb(TEXT_train, train) +
-            name_emb(NE_LABEL_train, train) + 
-            extend_dim(pad_zero(make_one_hot(train, untok_train, 'P')), 300) +
-            extend_dim(pad_zero(make_one_hot(train, untok_train, 'A')), 300) +
-            extend_dim(pad_zero(make_one_hot(train, untok_train, 'B')), 300)
 
-        valid_out = text_emb(TEXT_valid, valid) +
-            name_emb(NE_LABEL_valid, valid) + 
-            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'P')), 300) +
-            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'A')), 300) +
-            extend_dim(pad_zero(make_one_hot(valid, untok_valid, 'B')), 300)
 
-        train_out = text_emb(TEXT_test, test_data) +
-            name_emb(NE_LABEL_test, test_data) + 
-            extend_dim(pad_zero(make_one_hot(test, untok_test, 'P')), 300) +
-            extend_dim(pad_zero(make_one_hot(test, untok_test, 'A')), 300) +
-            extend_dim(pad_zero(make_one_hot(test, untok_test, 'B')), 300)
 
-        return train_out.view(-1), valid_out.view(-1), test_out.view(-1)
+    def load(self):
+
+        TEXT_train, TEXT_valid,TEXT_test, NE_LABEL_train, NE_LABEL_valid, NE_LABEL_test, _, _, _,  train, valid, test, untok_train, untok_valid, untok_test = self.load_first()
+
+
+        train_text, train_text_pad = self.text_emb(TEXT_train, train)
+        train_name, train_name_pad = self.name_emb(NE_LABEL_train, train)
+
+        train_pro, train_pro_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'P'))
+        train_pro = self.extend_dim(train_pro, 300)
+        train_pro_pad = self.extend_dim(train_pro_pad, 300)
+
+        train_A, train_A_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'A'))
+        train_A = self.extend_dim(train_A, 300)
+        train_A_pad = self.extend_dim(train_A_pad, 300)
+
+        train_B, train_B_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'B'))
+        train_B = self.extend_dim(train_B, 300)
+        train_B_pad = self.extend_dim(train_B_pad, 300)
+
+
+        train_out = torch.from_numpy(np.hstack([train_text, train_name, train_pro, train_A, train_B]))
+        train_out_pad = torch.from_numpy(np.hstack([train_text_pad, train_name_pad, train_pro_pad, train_A_pad, train_B_pad]))
+
+
+        print("WORKED")
+
 
 
 
@@ -342,17 +386,9 @@ def main():
     train_path = './data/gap-development.tsv'
     valid_path = './data/gap-validation.tsv'
     test_path = './data/gap-test.tsv'
-    load_data = GapDataset(train_path, valid_path, test_path)
-    temp, TEXT, PRONOUN, NE_LABEL, word_emb, _, _, _, train, valid, test = load_data.loader()
-
-    load_data.one_hot(train, temp)
-    
-
-
-
-    #print(NE_LABEL.vocab.freqs.most_common(20))
-
-
+    dataloader = GapDataset(train_path, valid_path, test_path)
+    train, valid, test = dataloader.load()
+    print("DATA LOADED.")
 
 
 
