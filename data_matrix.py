@@ -10,6 +10,8 @@ import re
 import string
 import numpy as np
 from itertools import chain
+from copy import deepcopy
+
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
 
@@ -40,6 +42,23 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         self.lemmatizer = WordNetLemmatizer()        
 
 
+
+
+    def flatten_list(self, lst):
+        
+        lst = deepcopy(lst)
+        
+        while lst:
+            sublist = lst.pop(0)
+
+            if isinstance(sublist, list):
+                lst = sublist + lst
+            else:
+                yield sublist
+
+
+
+
     # Input: TEXT, train
     #
     def text_emb(self, TEXT, tok_input):
@@ -60,9 +79,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             pad = [len(i) * [1] for i in tok_input.Text]
             pad_checker = [(i + N * [0])[:N] for i in pad]
 
-        entire_emb = np.hstack(entire_emb)
-        print(entire_emb.shape)
-        pad_checker = np.hstack(np.array(pad_checker))
 
         return entire_emb, pad_checker
 
@@ -110,8 +126,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             word_list = []
             #print(embedding)
 
-        embedding = np.hstack(np.array(embedding))
-        pad_checker = np.hstack(np.array(pad_checker))
         
         return embedding, pad_checker
 
@@ -125,7 +139,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         pad_checker = [len(i) * [1] for i in lst]
         pad_checker = [(i + N * [0])[:N] for i in pad_checker]
 
-
         return padded_lst, pad_checker
 
 
@@ -138,7 +151,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             new_data.append(temp_data)
             temp_data = []
 
-        new_data = np.hstack(np.array(new_data))
         return new_data
         
 
@@ -372,12 +384,11 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         train_B_pad = self.extend_dim(train_B_pad, 300)
 
 
-        train_out = torch.from_numpy(np.hstack([train_text, train_name, train_pro, train_A, train_B]))
-        train_out_pad = torch.from_numpy(np.hstack([train_text_pad, train_name_pad, train_pro_pad, train_A_pad, train_B_pad]))
+        train_out = torch.Tensor(next(self.flatten_list([train_text, train_name, train_pro, train_A, train_B])))
+        train_out_pad = torch.Tensor(next(self.flatten_list([train_text_pad, train_name_pad, train_pro_pad, train_A_pad, train_B_pad])))
 
 
-        print("WORKED")
-
+        
 
 
 
