@@ -11,6 +11,7 @@ import string
 import numpy as np
 from itertools import chain
 from copy import deepcopy
+import itertools
 
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
@@ -28,6 +29,18 @@ def tokenizer(x):
         if out[i].isdigit():
             out[i] = "<num>"
     return out
+
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+def grouper(n, iterable, fillvalue=None):
+    #"grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return itertools.zip_longest(fillvalue=fillvalue, *args)
+
+
 
 class GapDataset(object):  # one seperate object, formal way to declare object
 
@@ -87,16 +100,18 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         name_dict = NE_LABEL
         tok_input = train
     """
-    def name_emb(self, name_dict, tok_input):
+    def name_emb(self, name_dict, tok_input, MAX_DIM):
         name_emb_lst = []
         embedding = []
         name_lst = [name_dict.vocab.itos[i] for i in range(0,len(name_dict.vocab))]
+        #print(len(name_lst))
         N = len(max(tok_input.Text, key=lambda x: len(x)))
 
         for x in tok_input.Text:
             each = [item for item in x if item in name_lst]
             name_emb_lst.append(each)
-        max_len = len(max(name_emb_lst, key=lambda x: len(x)))+1
+        #max_len = len(max(name_emb_lst, key=lambda x: len(x)))+1
+        max_len = MAX_DIM
         temp = []
         
         pad_checker = [len(i) * [1] for i in name_emb_lst]
@@ -125,8 +140,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             temp = []
             word_list = []
             #print(embedding)
-
-        
         return embedding, pad_checker
 
 
@@ -181,7 +194,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 temp = ''
         return tokenized
 
-
     def make_one_hot(self, tok_input, untok_input, which_word): 
         idx = 0
         one_hot = []
@@ -233,6 +245,29 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
         return one_hot
             
+
+    """
+        creates y output: (ternary)
+        0 : neutral
+        1 : target A
+        2 : target B
+    """
+    def y_out(self, tok_input):    
+
+        out = []
+        for tok in tok_input:
+            if tok.A_coref == 'FALSE' and tok.B_coref == 'FALSE':
+                out.append(0)
+            elif tok.A_coref == 'TRUE' and tok.B_coref == 'FALSE':
+                out.append(1)
+            elif tok.A_coref == 'FALSE' and tok.B_coref == 'TRUE':
+                out.append(2)
+            else:
+                print('Y_OUT ERROR')
+        return out
+
+
+
 
     def load_first(self):
         #tokenize = lambda x: self.lemmatizer.lemmatize(re.sub(r'<.*?>|[^\w\s]|\d+', '', x)).split()
@@ -362,33 +397,55 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
 
 
+    def load(self, which_data, MAX_DIM_NAME_EMB):
 
-    def load(self):
-
-        TEXT_train, TEXT_valid,TEXT_test, NE_LABEL_train, NE_LABEL_valid, NE_LABEL_test, _, _, _,  train, valid, test, untok_train, untok_valid, untok_test = self.load_first()
-
-
-        train_text, train_text_pad = self.text_emb(TEXT_train, train)
-        train_name, train_name_pad = self.name_emb(NE_LABEL_train, train)
-
-        train_pro, train_pro_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'P'))
-        train_pro = self.extend_dim(train_pro, 300)
-        train_pro_pad = self.extend_dim(train_pro_pad, 300)
-
-        train_A, train_A_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'A'))
-        train_A = self.extend_dim(train_A, 300)
-        train_A_pad = self.extend_dim(train_A_pad, 300)
-
-        train_B, train_B_pad = self.pad_zero(self.make_one_hot(train, untok_train, 'B'))
-        train_B = self.extend_dim(train_B, 300)
-        train_B_pad = self.extend_dim(train_B_pad, 300)
+        TEXT, NE_LABEL, tok_data, untok_data = None, None, None, None
+        data_out, data_out_pad = [], []
 
 
-        train_out = torch.Tensor(next(self.flatten_list([train_text, train_name, train_pro, train_A, train_B])))
-        train_out_pad = torch.Tensor(next(self.flatten_list([train_text_pad, train_name_pad, train_pro_pad, train_A_pad, train_B_pad])))
+        if which_data == "train":
+            TEXT, _, _, NE_LABEL, _, _, _, _, _, tok_data, _, _, untok_data, _, _ = self.load_first()
+        elif which_data == "valid":
+            _, TEXT, _, _, NE_LABEL, _, _, _, _, _, tok_data, _, _, untok_data, _ = self.load_first()
+        elif which_data == "train":
+            _, _,TEXT, _, _, NE_LABEL, _, _, _, _, _, tok_data, _, _, untok_data = self.load_first()
 
 
-        
+        #for x in batch(range(0, len(tok_data)), self.batch_size):
+#            if count % self.batching == 0:
+                    
+        data_text, data_text_pad = self.text_emb(TEXT, tok_data)
+        data_name, data_name_pad = self.name_emb(NE_LABEL, tok_data, MAX_DIM_NAME_EMB)
+
+        data_pro, data_pro_pad = self.pad_zero(self.make_one_hot(tok_data, untok_data, 'P'))
+        data_pro = self.extend_dim(data_pro, 300)
+        data_pro_pad = self.extend_dim(data_pro_pad, 300)
+
+        data_A, data_A_pad = self.pad_zero(self.make_one_hot(tok_data, untok_data, 'A'))
+        data_A = self.extend_dim(data_A, 300)
+        data_A_pad = self.extend_dim(data_A_pad, 300)
+
+        data_B, data_B_pad = self.pad_zero(self.make_one_hot(tok_data, untok_data, 'B'))
+        data_B = self.extend_dim(data_B, 300)
+        data_B_pad = self.extend_dim(data_B_pad, 300)
+
+        x_data_out = list(grouper(self.batch_size, [data_text, data_name, data_pro, data_A, data_B]))
+        x_data_out_pad = list(grouper(self.batch_size, [data_text_pad, data_name_pad, data_pro_pad, data_A_pad, data_B_pad]))
+
+#        print("worked up to here")
+
+        y_data_out = list(grouper(self.batch_size, self.y_out(tok_data)))
+        #x_data, x_data_pad = data.BucketIterator.splits((data_out, data_out_pad),
+        #    batch_size=self.batch_size, repeat=False, shuffle=True)
+
+ #       print("batching worked")
+
+        return x_data_out, x_data_out_pad, y_data_out
+
+
+#        train_out = torch.Tensor(next(self.flatten_list([train_text, train_name, train_pro, train_A, train_B])))
+#        train_out_pad = torch.Tensor(next(self.flatten_list([train_text_pad, train_name_pad, train_pro_pad, train_A_pad, train_B_pad])))
+
 
 
 
@@ -398,7 +455,9 @@ def main():
     valid_path = './data/gap-validation.tsv'
     test_path = './data/gap-test.tsv'
     dataloader = GapDataset(train_path, valid_path, test_path)
-    train, valid, test = dataloader.load()
+    x_train, x_train_pad, y_train = dataloader.load('train', 30)
+
+
     print("DATA LOADED.")
 
 
