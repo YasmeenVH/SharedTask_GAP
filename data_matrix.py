@@ -431,6 +431,10 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         data_B_pad = self.extend_dim(data_B_pad, 300)
 
         x_data_out = list(grouper(self.batch_size, [data_text, data_name, data_pro, data_A, data_B]))
+ 
+
+
+
         x_data_out_pad = list(grouper(self.batch_size, [data_text_pad, data_name_pad, data_pro_pad, data_A_pad, data_B_pad]))
 
 #        print("worked up to here")

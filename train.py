@@ -5,16 +5,16 @@ import sys
 sys.path.insert(0, './networks')
 import torch.utils.data as data
 import copy
-from data import GapDataset
+from data_matrix import GapDataset
 from networks.logistic import LogisticRegression
 from networks.SVM import SVM
 from networks.feedforward import feedforward_nn
-from networks.RNN import RNN
+from networks.RNN import RNNLinear
 
 
 
 def multiclass_log_loss(y_true, y_pred, eps=1e-15):
-    
+
     predictions = np.clip(y_pred, eps, 1 - eps)
 
     # normalize row sums to 1
@@ -50,11 +50,23 @@ class model_train(object):
     num_of_train = 0
     num_of_eval = 0
 
-    def __init__(self, model, train_data, valid_data, test_data, epoch_size):
+    def __init__(self, model,
+        x_train, x_train_pad, y_train, 
+        x_valid, x_valid_pad, y_valid,
+        x_test, x_test_pad, y_test, epoch_size):
         self.model = model
-        self.train_data = train_data
-        self.valid_data = valid_data
-        self.test_data = test_data
+        self.train_data = x_train
+        self.valid_data = x_valid
+        self.test_data = x_test
+
+        self.train_pad = x_train_pad
+        self.valid_pad = x_valid_pad
+        self.test_pad = x_test_pad
+
+        self.y_train = y_train
+        self.y_valid = y_valid
+        self.y_test = y_test
+
         self.epoch_size = epoch_size
 
     def train(self, optimizer, max_grad_norm):
@@ -71,8 +83,22 @@ class model_train(object):
             epoch_loss = []
             epoch_acc = []
             
-            for i, batch in enumerate(self.train_data):
+            for i, batch, pad, target in zip(enumerate(self.train_data), self.train_pad, self.y_train):
                 #Forward
+
+                batch = torch.Tensor(next(self.flatten_list(batch)))
+                pad =  torch.Tensor(next(self.flatten_list(pad)))
+
+                input = torch.mm(batch, pad)
+
+                print("SHAPE OF ONE BATCH", input.shape)
+                y_pred = self.model(input)
+                print("Y_PRED", y_pred)
+                loss = multiclass_log_loss(target, y_pred)
+                print(loss)
+                epoch_loss.append(loss)
+
+                """
                 self.optimizer.zero_grad()
 
                 batch_size = len(batch.text[0])
@@ -85,6 +111,10 @@ class model_train(object):
 
                 epoch_loss.append(loss.item())
                 epoch_acc.append(acc)
+                """
+
+
+
                 #Backward
                 loss.backward()  # calculate the gradient
 
@@ -133,12 +163,30 @@ class model_train(object):
 # THIS WILL BE CALLED WHEN RUNNING
 def main():
 
-    input_size = 7
-    output_size = 2
-    logistic = LogisticRegression(input_size, output_size)
+    input_size = 300
+    output_size = 3
+    #logistic = LogisticRegression(input_size, output_size)
     train_path = './data/gap-development.tsv'
     valid_path = './data/gap-validation.tsv'
     test_path = './data/gap-test.tsv'
+
+    dataloader = GapDataset(train_path, valid_path,test_path, batch_size=32)
+    x_train, x_train_pad, y_train = dataloader.load('train', 30)
+
+#    x_valid, x_valid_pad, y_valid = dataloader.load('valid', 30)
+#    x_test, x_test_pad, y_test = dataloader.load('test', 30)
+    RNN_model = RNNLinear(input_size, output_size, 2, 2)
+    RNN_class = model_train(RNN_model, 
+        x_train, x_train_pad, y_train,
+        x_train, x_train_pad, y_train,
+        x_train, x_train_pad, y_train, 32)
+
+    optimizer = optim.SGD(RNN_model.parameters(), lr = 0.01, momentum=0.9)
+    max_grad_norm = 5
+    totla_loss, total_acc = RNN_class.train(optimizer, max_grad_norm)
+
+
+    """
 
     dataset = GapDataset(train_path, valid_path,test_path)
     TEXT, PRONOUN, NE_LABEL, word_emb, pro_emb, NE_emb, train_data, valid_data, test_data, _, _, _ = dataset.loader()
@@ -146,7 +194,7 @@ def main():
     optimizer = optim.SGD(logistic.parameters(), lr = 0.01, momentum=0.9)
     max_grad_norm = 5
     totla_loss, total_acc = logistic_reg.train(optimizer, max_grad_norm)
-
+    """
 
 
 
