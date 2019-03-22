@@ -248,20 +248,21 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
     """
         creates y output: (ternary)
-        0 : neutral
-        1 : target A
-        2 : target B
+        0 : target A
+        1 : target B
+        2 : neutral
+
     """
     def y_out(self, tok_input):    
 
         out = []
         for tok in tok_input:
             if tok.A_coref == 'FALSE' and tok.B_coref == 'FALSE':
-                out.append(0)
-            elif tok.A_coref == 'TRUE' and tok.B_coref == 'FALSE':
-                out.append(1)
-            elif tok.A_coref == 'FALSE' and tok.B_coref == 'TRUE':
                 out.append(2)
+            elif tok.A_coref == 'TRUE' and tok.B_coref == 'FALSE':
+                out.append(0)
+            elif tok.A_coref == 'FALSE' and tok.B_coref == 'TRUE':
+                out.append(1)
             else:
                 print('Y_OUT ERROR')
         return out
