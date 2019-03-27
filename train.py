@@ -10,6 +10,7 @@ from networks.logistic import LogisticRegression
 from networks.SVM import SVM
 from networks.feedforward import feedforward_nn
 from networks.RNN import RNNLinear
+from copy import deepcopy
 
 
 
@@ -25,6 +26,22 @@ def multiclass_log_loss(y_true, y_pred, eps=1e-15):
     actual[np.arange(rows), y_true.astype(int)] = 1
     vsota = np.sum(actual * np.log(predictions))
     return -1.0 / rows * vsota
+
+
+def flatten_list(lst):
+    
+    lst = deepcopy(lst)
+    
+    while lst:
+        sublist = lst.pop(0)
+
+        if isinstance(sublist, list):
+            lst = sublist + lst
+        else:
+            yield sublist
+
+
+
 
 
 #Data path
@@ -68,6 +85,7 @@ class model_train(object):
         self.y_test = y_test
 
         self.epoch_size = epoch_size
+        self.batch_size = 32
 
     def train(self, optimizer, max_grad_norm):
 
@@ -82,12 +100,36 @@ class model_train(object):
         for epoch in range(self.epoch_size):
             epoch_loss = []
             epoch_acc = []
-            
-            for i, batch, pad, target in zip(enumerate(self.train_data), self.train_pad, self.y_train):
-                #Forward
+            print("LEN TRAIN", len(self.train_data))
+            for batch, pad, target in zip(self.train_data, self.train_pad, self.y_train):
+            #for i in range(0, len(self.train_data)):
 
-                batch = torch.Tensor(next(self.flatten_list(batch)))
-                pad =  torch.Tensor(next(self.flatten_list(pad)))
+
+                print(len(batch))
+                print(len(batch[0]))
+
+                print(len(pad))
+                prinT(len(pad[0]))
+                #list(zip(*lst))[0:2]
+
+                """
+                lst=[[1,2,3],[11,12,13],[21,22,23]]
+                testing = zip(*lst)[i]
+                print(len(testing))
+
+                """
+
+                #batch = [item[0:self.batch_size] for item in self.train_data]
+                #pad = [item[0:self.batch_size] for item in self.train_pad]
+
+
+                #batch = next(flatten_list(batch))
+                #pad = next(flatten_list(pad))
+                batch = torch.Tensor(next(flatten_list(batch)))
+                pad =  torch.Tensor(next(flatten_list(pad)))
+
+                print(batch[0].shape, pad[0].shape)
+
 
                 input = torch.mm(batch, pad)
 

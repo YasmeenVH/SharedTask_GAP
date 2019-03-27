@@ -430,16 +430,23 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         data_B = self.extend_dim(data_B, 300)
         data_B_pad = self.extend_dim(data_B_pad, 300)
 
-        x_data_out = list(grouper(self.batch_size, [data_text, data_name, data_pro, data_A, data_B]))
+
+        print(len(data_text), len(data_name), len(data_pro), len(data_A), len(data_B))
+        #exit()
+
+        x_data_out = [data_text, data_name, data_pro, data_A, data_B]
+        #x_data_out = list(grouper(self.batch_size, [data_text, data_name, data_pro, data_A, data_B]))
  
 
+        x_data_out_pad = [data_text_pad, data_name_pad, data_pro_pad, data_A_pad, data_B_pad]
 
 
-        x_data_out_pad = list(grouper(self.batch_size, [data_text_pad, data_name_pad, data_pro_pad, data_A_pad, data_B_pad]))
+        #x_data_out_pad = list(grouper(self.batch_size, [data_text_pad, data_name_pad, data_pro_pad, data_A_pad, data_B_pad]))
 
 #        print("worked up to here")
+        y_data_out = self.y_out(tok_data)
 
-        y_data_out = list(grouper(self.batch_size, self.y_out(tok_data)))
+        #y_data_out = list(grouper(self.batch_size, self.y_out(tok_data)))
         #x_data, x_data_pad = data.BucketIterator.splits((data_out, data_out_pad),
         #    batch_size=self.batch_size, repeat=False, shuffle=True)
 
