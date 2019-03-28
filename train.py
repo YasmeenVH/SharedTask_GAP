@@ -11,7 +11,7 @@ from networks.SVM import SVM
 from networks.feedforward import feedforward_nn
 from networks.RNN import RNNLinear
 from copy import deepcopy
-
+from itertools import chain
 
 
 def multiclass_log_loss(y_true, y_pred, eps=1e-15):
@@ -26,7 +26,11 @@ def multiclass_log_loss(y_true, y_pred, eps=1e-15):
     actual[np.arange(rows), y_true.astype(int)] = 1
     vsota = np.sum(actual * np.log(predictions))
     return -1.0 / rows * vsota
-
+"""
+def flatten(lst):
+    return sum( ([x] if not isinstance(x, list) else flatten(x)
+             for x in lst), [] )
+ 
 
 def flatten_list(lst):
     
@@ -41,6 +45,14 @@ def flatten_list(lst):
             yield sublist
 
 
+"""
+
+def flatten(x):
+    return concatMap(flatten, x) if isinstance(x, list) else [x]
+ 
+# concatMap :: (a -> [b]) -> [a] -> [b]
+def concatMap(f, xs):
+    return list(chain.from_iterable(map(f, xs)))
 
 
 
@@ -96,21 +108,17 @@ class model_train(object):
         total_loss = []
         total_acc = []
         print("%%%%% ENTERING HERE")
-        # YASMEEN, YOU CAN CONTINUE DEBUGGING FROM HERE
+
+
         for epoch in range(self.epoch_size):
             epoch_loss = []
             epoch_acc = []
-            print("LEN TRAIN", len(self.train_data))
-            for batch, pad, target in zip(self.train_data, self.train_pad, self.y_train):
-            #for i in range(0, len(self.train_data)):
+            for i, (batch, pad, target) in enumerate(zip(self.train_data, self.train_pad, self.y_train)):
 
 
-                print(len(batch))
-                print(len(batch[0]))
-
-                print(len(pad))
-                prinT(len(pad[0]))
-                #list(zip(*lst))[0:2]
+                # fetching n items from each embedding [main emb, name emb, pro emb, A emb, B emb]
+                this_batch = list(zip(*batch))[i]
+                this_pad = list(zip(*pad))[i]
 
                 """
                 lst=[[1,2,3],[11,12,13],[21,22,23]]
@@ -118,18 +126,12 @@ class model_train(object):
                 print(len(testing))
 
                 """
-
-                #batch = [item[0:self.batch_size] for item in self.train_data]
-                #pad = [item[0:self.batch_size] for item in self.train_pad]
-
-
-                #batch = next(flatten_list(batch))
-                #pad = next(flatten_list(pad))
-                batch = torch.Tensor(next(flatten_list(batch)))
-                pad =  torch.Tensor(next(flatten_list(pad)))
-
-                print(batch[0].shape, pad[0].shape)
-
+                batch = flatten(batch)
+                print(type(batch), len(batch))
+                print(len(batch[0]))
+                exit()
+                batch = torch.Tensor(flatten(this_batch))
+                pad =  torch.Tensor(flatten(this_pad))
 
                 input = torch.mm(batch, pad)
 

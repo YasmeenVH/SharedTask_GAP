@@ -40,6 +40,9 @@ def grouper(n, iterable, fillvalue=None):
     args = [iter(iterable)] * n
     return itertools.zip_longest(fillvalue=fillvalue, *args)
 
+def padder(l, size, padding):
+    return l + [padding] * abs((len(l)-size))
+
 
 
 class GapDataset(object):  # one seperate object, formal way to declare object
@@ -77,22 +80,33 @@ class GapDataset(object):  # one seperate object, formal way to declare object
     def text_emb(self, TEXT, tok_input):
         zero = TEXT.vocab.vectors[TEXT.vocab.stoi["<UNK>"]]
         N = len(max(tok_input.Text, key=lambda x: len(x)))
+        #print("N", N)
         entire_emb = []
-        #pad_checker = []
+        pad_checker = []
         data_emb = []
         for data in tok_input:
             for i in data.Text:
                 data_emb.append(TEXT.vocab.vectors[TEXT.vocab.stoi[i]])
             #print(N-len(data_emb))
+            pad_check = [len(i) * [1] for i in data_emb]
+            #print("INNER PAD", len(pad_check))
             padded_lst = data_emb + [TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']]] * (N-len(data_emb))
+            pad_check = padder(pad_check, N, 0)
+            #print("INNER CHECKER", len(pad_checker))
+
+            pad_checker.append(pad_check)
+
             #print("^^", padded_lst)
+            #print("%%%", len(padded_lst))
             entire_emb.append(padded_lst)
             data_emb = []
-            
-            pad = [len(i) * [1] for i in tok_input.Text]
-            pad_checker = [(i + N * [0])[:N] for i in pad]
+        #print("ENTIRE", len(entire_emb))
 
 
+     
+        pad_checker = self.extend_dim(pad_checker, 300)
+ 
+        
         return entire_emb, pad_checker
 
 
@@ -114,9 +128,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         max_len = MAX_DIM
         temp = []
         
-        pad_checker = [len(i) * [1] for i in name_emb_lst]
-        pad_checker = [(i + max_len * [0])[:max_len] for i in pad_checker]
-        
+        #pad_checker = [len(i) * [1] for i in name_emb_lst]
+        #pad_checker = [(i + max_len * [0])[:max_len] for i in pad_checker]
+        pad_checker = []
         for data, names in zip(tok_input, name_emb_lst):
             idx = 1
             #print((data.Text))
@@ -134,12 +148,27 @@ class GapDataset(object):  # one seperate object, formal way to declare object
                 temp.append(word_list)
                 #print(word_list)
                 
-            #print(temp)    
+            #print(temp)  
+            
             #print(temp + [[0] * max_len] * (N-len(data.Text)))
-            embedding.append(temp + [[0] * max_len] * (N-len(data.Text)))
+            this = temp + [[0] * max_len] * (N-len(data.Text))
+            embedding.append(this)
+            pad_check = [len(i) * [1] for i in this]
+            pad_check = padder(pad_check, N, 0)
+            pad_checker.append(pad_check)
+
             temp = []
             word_list = []
             #print(embedding)
+
+
+        #print("PAD_CHECK", len(pad_checker), len(pad_checker[0]))
+
+        testing = self.extend_dim(pad_checker, max_len)
+
+        #print("AFTER:", len(testing), len(testing[0]))
+
+
         return embedding, pad_checker
 
 
@@ -416,11 +445,20 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 #            if count % self.batching == 0:
                     
         data_text, data_text_pad = self.text_emb(TEXT, tok_data)
+        print("text", len(data_text), len(data_text[0]))
+        print("text_pad", len(data_text_pad), len(data_text_pad[0]))
+
         data_name, data_name_pad = self.name_emb(NE_LABEL, tok_data, MAX_DIM_NAME_EMB)
+        print("name", len(data_name), len(data_name[0]))
+        print("name_pad", len(data_name_pad), len(data_name_pad[0]))
+
 
         data_pro, data_pro_pad = self.pad_zero(self.make_one_hot(tok_data, untok_data, 'P'))
         data_pro = self.extend_dim(data_pro, 300)
         data_pro_pad = self.extend_dim(data_pro_pad, 300)
+
+        print("pro", len(data_pro), len(data_pro[0]))
+        print("pro_pad", len(data_pro_pad), len(data_pro_pad[0]))
 
         data_A, data_A_pad = self.pad_zero(self.make_one_hot(tok_data, untok_data, 'A'))
         data_A = self.extend_dim(data_A, 300)
@@ -430,9 +468,6 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         data_B = self.extend_dim(data_B, 300)
         data_B_pad = self.extend_dim(data_B_pad, 300)
 
-
-        print(len(data_text), len(data_name), len(data_pro), len(data_A), len(data_B))
-        #exit()
 
         x_data_out = [data_text, data_name, data_pro, data_A, data_B]
         #x_data_out = list(grouper(self.batch_size, [data_text, data_name, data_pro, data_A, data_B]))
