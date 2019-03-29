@@ -114,11 +114,47 @@ class model_train(object):
             epoch_loss = []
             epoch_acc = []
             for i, (batch, pad, target) in enumerate(zip(self.train_data, self.train_pad, self.y_train)):
+                this_batch = flatten(batch)
+                this_pad = flatten(pad)
+                (print("EEEE"))
+                input = torch.mm(batch, pad)
 
-
+                exit()
                 # fetching n items from each embedding [main emb, name emb, pro emb, A emb, B emb]
                 this_batch = list(zip(*batch))[i]
-                this_pad = list(zip(*pad))[i]
+                #this_pad = list(zip(*pad)) [i]
+                #this_pad = [torch.Tensor(flatten(x)) for x in this_pad]
+
+                print(type(this_batch[0]), type(this_batch[1]), type(this_batch[2]), type(this_batch[3]), type(this_batch[4]))
+                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+
+                this_batch = [torch.unsqueeze(x, 0) for x in this_batch]
+                print(type(this_batch[0]), type(this_batch[1]), type(this_batch[2]), type(this_batch[3]), type(this_batch[4]))
+                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+
+                exit()
+                batch_stack = torch.stack(this_batch[0]+this_batch[1]+this_batch[2]+this_batch[3]+this_batch[4])
+
+                print(type(batch_stack), len(batch_stack))
+                print(type(batch_stack[0]), len(batch_stack[0]))
+
+                exit()
+
+                this_batch = torch.cat((temp0, temp1, temp2, temp3, temp4), 0)
+                this_pad = torch.cat((this_pad[0], this_pad[1], this_pad[2], this_pad[3], this_pad[4]), 0)
+                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+
+                print(type(this_batch), len(this_batch))
+                print(type(this_batch[0]))
+
+                print(type(this_pad), len(this_pad))
+                print(type(this_pad[0]))
+                exit()
+                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+
+                print(type(this_pad[0]), type(this_pad[1]), type(this_pad[2]), type(this_pad[3]), type(this_pad[4]))
+
+
 
                 """
                 lst=[[1,2,3],[11,12,13],[21,22,23]]
@@ -126,12 +162,14 @@ class model_train(object):
                 print(len(testing))
 
                 """
-                batch = flatten(batch)
-                print(type(batch), len(batch))
-                print(len(batch[0]))
-                exit()
-                batch = torch.Tensor(flatten(this_batch))
-                pad =  torch.Tensor(flatten(this_pad))
+                batch = torch.stack(torch.Tensor(batch))
+                pad = torch.stack(torch.Tensor(pad))
+
+                print(type(batch), len(batch), len(pad))
+                print((type(batch[1]), type(pad[1])))
+          
+                #batch = torch.Tensor(flatten(this_batch))
+                #pad =  torch.Tensor(flatten(this_pad))
 
                 input = torch.mm(batch, pad)
 

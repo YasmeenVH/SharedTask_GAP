@@ -86,11 +86,11 @@ class GapDataset(object):  # one seperate object, formal way to declare object
         data_emb = []
         for data in tok_input:
             for i in data.Text:
-                data_emb.append(TEXT.vocab.vectors[TEXT.vocab.stoi[i]])
+                data_emb.append((TEXT.vocab.vectors[TEXT.vocab.stoi[i]]).tolist())
             #print(N-len(data_emb))
             pad_check = [len(i) * [1] for i in data_emb]
             #print("INNER PAD", len(pad_check))
-            padded_lst = data_emb + [TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']]] * (N-len(data_emb))
+            padded_lst = data_emb + [(TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']]).tolist()] * (N-len(data_emb))
             pad_check = padder(pad_check, N, 0)
             #print("INNER CHECKER", len(pad_checker))
 
