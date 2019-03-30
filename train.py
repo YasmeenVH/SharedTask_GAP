@@ -12,7 +12,7 @@ from networks.feedforward import feedforward_nn
 from networks.RNN import RNNLinear
 from copy import deepcopy
 from itertools import chain
-
+import numpy as np
 
 def multiclass_log_loss(y_true, y_pred, eps=1e-15):
 
@@ -46,6 +46,11 @@ def flatten_list(lst):
 
 
 """
+def dot(K, L):
+   if len(K) != len(L):
+      return 0
+
+   return sum(i[0] * i[1] for i in zip(K, L))
 
 def flatten(x):
     return concatMap(flatten, x) if isinstance(x, list) else [x]
@@ -113,67 +118,23 @@ class model_train(object):
         for epoch in range(self.epoch_size):
             epoch_loss = []
             epoch_acc = []
-            for i, (batch, pad, target) in enumerate(zip(self.train_data, self.train_pad, self.y_train)):
-                this_batch = flatten(batch)
-                this_pad = flatten(pad)
-                (print("EEEE"))
-                input = torch.mm(batch, pad)
+            for i, target in enumerate(self.y_train):
 
-                exit()
                 # fetching n items from each embedding [main emb, name emb, pro emb, A emb, B emb]
-                this_batch = list(zip(*batch))[i]
-                #this_pad = list(zip(*pad)) [i]
-                #this_pad = [torch.Tensor(flatten(x)) for x in this_pad]
+                this_batch = list(zip(*self.train_data))[i]
+                this_pad = list(zip(*self.train_pad))[i]
+                
+                # flatten each emb
+                this_batch = [np.asarray(x).ravel() for x in this_batch]
+                this_pad = [np.asarray(x).ravel() for x in this_pad]
 
-                print(type(this_batch[0]), type(this_batch[1]), type(this_batch[2]), type(this_batch[3]), type(this_batch[4]))
-                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+                # data x pad then concat all emb's together
+                input = [np.multiply(x, y) for x, y in zip(this_batch, this_pad)]
+                input =  torch.from_numpy(np.concatenate(input).ravel())
 
-                this_batch = [torch.unsqueeze(x, 0) for x in this_batch]
-                print(type(this_batch[0]), type(this_batch[1]), type(this_batch[2]), type(this_batch[3]), type(this_batch[4]))
-                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
+                print(input.shape)
 
-                exit()
-                batch_stack = torch.stack(this_batch[0]+this_batch[1]+this_batch[2]+this_batch[3]+this_batch[4])
-
-                print(type(batch_stack), len(batch_stack))
-                print(type(batch_stack[0]), len(batch_stack[0]))
-
-                exit()
-
-                this_batch = torch.cat((temp0, temp1, temp2, temp3, temp4), 0)
-                this_pad = torch.cat((this_pad[0], this_pad[1], this_pad[2], this_pad[3], this_pad[4]), 0)
-                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
-
-                print(type(this_batch), len(this_batch))
-                print(type(this_batch[0]))
-
-                print(type(this_pad), len(this_pad))
-                print(type(this_pad[0]))
-                exit()
-                print(len(this_batch[0]), len(this_batch[1]), len(this_batch[2]), len(this_batch[3]), len(this_batch[4]))
-
-                print(type(this_pad[0]), type(this_pad[1]), type(this_pad[2]), type(this_pad[3]), type(this_pad[4]))
-
-
-
-                """
-                lst=[[1,2,3],[11,12,13],[21,22,23]]
-                testing = zip(*lst)[i]
-                print(len(testing))
-
-                """
-                batch = torch.stack(torch.Tensor(batch))
-                pad = torch.stack(torch.Tensor(pad))
-
-                print(type(batch), len(batch), len(pad))
-                print((type(batch[1]), type(pad[1])))
-          
-                #batch = torch.Tensor(flatten(this_batch))
-                #pad =  torch.Tensor(flatten(this_pad))
-
-                input = torch.mm(batch, pad)
-
-                print("SHAPE OF ONE BATCH", input.shape)
+                
                 y_pred = self.model(input)
                 print("Y_PRED", y_pred)
                 loss = multiclass_log_loss(target, y_pred)
@@ -181,19 +142,12 @@ class model_train(object):
                 epoch_loss.append(loss)
 
                 """
-                self.optimizer.zero_grad()
-
-                batch_size = len(batch.text[0])
-                y_pred = self.model(batch.text[0], batch_size)
-                print(y_pred)
-                y_target = self.B # what are you calling? we don't have self.B
-                loss = self.bce_loss( y_pred, y_target) #size_average=False       not too sure why this was here before
-                correct = ((torch.max(pred, 1)[1] == y_target)).sum().numpy()
+                HERE, NEED TO SEE HOW THE OUTPUT LOOK LIKE
+                AND CALCULATE ACCURACY
+                correct = ((torch.max(pred, 1)[1] == batch.label)).sum().numpy()
                 acc = correct/pred.shape[0]
-
-                epoch_loss.append(loss.item())
-                epoch_acc.append(acc)
                 """
+
 
 
 
@@ -225,12 +179,37 @@ class model_train(object):
         total_loss = []
         total_acc = []
 
-        for i, batch in enumerate(self.valid_data):
-            batch_size = len(batch.text[0])
-            y_pred = model(batch.text[0], batch_size)
-            loss = self.bce_loss(NE_LABEL, y_pred, y_target)
+        for i, target in enumerate(self.y_valid):
+
+
+
+            # fetching n items from each embedding [main emb, name emb, pro emb, A emb, B emb]
+            this_batch = list(zip(*self.valid_data))[i]
+            this_pad = list(zip(*self.valid_pad))[i]
+
+            # flatten each emb
+            this_batch = [np.asarray(x).ravel() for x in this_batch]
+            this_pad = [np.asarray(x).ravel() for x in this_pad]
+
+            # data x pad then concat all emb's together
+            input = [np.multiply(x, y) for x, y in zip(this_batch, this_pad)]
+            input =  torch.from_numpy(np.concatenate(input).ravel())
+
+            print(input.shape)
+
+            y_pred = self.model(input)
+            print("Y_PRED", y_pred)
+            loss = multiclass_log_loss(target, y_pred)
+#
+
+            """
+            HERE, NEED TO SEE HOW THE OUTPUT LOOK LIKE
+            AND CALCULATE ACCURACY
+            ie.
             correct = ((torch.max(pred, 1)[1] == batch.label)).sum().numpy()
             acc = correct/pred.shape[0]
+            """
+
             total_loss.append(loss.item())
             total_acc.append(acc)
             print("++++++EVAL Batch {}/{}, Batch Loss: {:.4f}, Accuracy: {:.4f}".format(i+1,len(self.valid_data), loss, acc))
@@ -245,7 +224,7 @@ class model_train(object):
 # THIS WILL BE CALLED WHEN RUNNING
 def main():
 
-    input_size = 300
+    input_size = 253380
     output_size = 3
     #logistic = LogisticRegression(input_size, output_size)
     train_path = './data/gap-development.tsv'

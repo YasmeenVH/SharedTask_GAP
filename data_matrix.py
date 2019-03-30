@@ -88,12 +88,17 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             for i in data.Text:
                 data_emb.append((TEXT.vocab.vectors[TEXT.vocab.stoi[i]]).tolist())
             #print(N-len(data_emb))
-            pad_check = [len(i) * [1] for i in data_emb]
+            
+            #pad_check = [len(i) * [1] for i in data_emb]
             #print("INNER PAD", len(pad_check))
-            padded_lst = data_emb + [(TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']]).tolist()] * (N-len(data_emb))
+            #print("DATA_EMB", len(data_emb))
+            padded_lst = data_emb + [TEXT.vocab.vectors[TEXT.vocab.stoi['<UNK>']].tolist()] * (N-len(data_emb))
+            #print("PADDED_LST", len(padded_lst))
+
+            pad_check = [1 for x in data.Text]
             pad_check = padder(pad_check, N, 0)
             #print("INNER CHECKER", len(pad_checker))
-
+            
             pad_checker.append(pad_check)
 
             #print("^^", padded_lst)
@@ -152,8 +157,10 @@ class GapDataset(object):  # one seperate object, formal way to declare object
             
             #print(temp + [[0] * max_len] * (N-len(data.Text)))
             this = temp + [[0] * max_len] * (N-len(data.Text))
+            #print("THIS", len(this))
             embedding.append(this)
             pad_check = [len(i) * [1] for i in this]
+            #print("PAAAAAD", len(pad_check))
             pad_check = padder(pad_check, N, 0)
             pad_checker.append(pad_check)
 
@@ -164,7 +171,7 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
         #print("PAD_CHECK", len(pad_checker), len(pad_checker[0]))
 
-        testing = self.extend_dim(pad_checker, max_len)
+        #testing = self.extend_dim(pad_checker, max_len)
 
         #print("AFTER:", len(testing), len(testing[0]))
 
