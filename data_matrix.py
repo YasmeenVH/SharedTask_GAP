@@ -12,6 +12,11 @@ import numpy as np
 from itertools import chain
 from copy import deepcopy
 import itertools
+import sys
+import spacy
+print(sys.prefix)
+print(sys.path)
+
 
 
 lemmatizer = WordNetLemmatizer()  # is it redundant putting here also, even if I initialize in class?
@@ -505,9 +510,9 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
 # will remove this later: just trying to see how the output looks like
 def main():
-    train_path = './data/gap-development.tsv'
-    valid_path = './data/gap-validation.tsv'
-    test_path = './data/gap-test.tsv'
+    train_path = './Data/gap-development.tsv'
+    valid_path = './Data/gap-validation.tsv'
+    test_path = './Data/gap-test.tsv'
     dataloader = GapDataset(train_path, valid_path, test_path)
     x_train, x_train_pad, y_train = dataloader.load('train', 30)
 
