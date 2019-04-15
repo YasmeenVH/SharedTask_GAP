@@ -10,6 +10,7 @@ from networks.logistic import LogisticRegression
 from networks.SVM import SVM
 from networks.feedforward import feedforward_nn
 from networks.RNN_new import RNN
+from networks.RNN import RNNLinear
 from copy import deepcopy
 from itertools import chain
 import numpy as np
@@ -107,7 +108,7 @@ class model_train(object):
     def train(self, optimizer, max_grad_norm):
 
         model_train.num_of_train += 1 # increments training times
-        RNN_new.hidden = rnn.initHidden()
+        #RNN_new.hidden = rnn.initHidden()
 
         self.model.train()  #
 
@@ -238,7 +239,7 @@ def main():
 
 #    x_valid, x_valid_pad, y_valid = dataloader.load('valid', 30)
 #    x_test, x_test_pad, y_test = dataloader.load('test', 30)
-    RNN_model = RNN(input_size, hidden_size, output_size)
+    RNN_model = RNNLinear(input_size, hidden_size, output_size)
     RNN_class = model_train(RNN_model, 
         x_train, x_train_pad, y_train,
         x_train, x_train_pad, y_train,
