@@ -12,7 +12,7 @@ class RNNLinear(nn.Module):
         self.n_layers = n_layers
         self.rnn = nn.RNN(input_size,
                           hidden_size,
-                          n_layers, dropout=0.5, batch = True)
+                          n_layers, dropout=0.5)
 
         self.linear = nn.Linear(hidden_size, input_size, bias = True)
 
