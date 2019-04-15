@@ -9,7 +9,7 @@ from data_matrix import GapDataset
 from networks.logistic import LogisticRegression
 from networks.SVM import SVM
 from networks.feedforward import feedforward_nn
-from networks.RNN import RNNLinear
+from networks.RNN_new import RNN
 from copy import deepcopy
 from itertools import chain
 import numpy as np
@@ -130,7 +130,7 @@ class model_train(object):
 
                 # data x pad then concat all emb's together
                 input = [np.multiply(x, y) for x, y in zip(this_batch, this_pad)]
-                input =  torch.from_numpy(np.concatenate(input).ravel())
+                input = torch.from_numpy(np.concatenate(input).ravel())
 
                 print(input.shape)
 
@@ -227,16 +227,16 @@ def main():
     input_size = 253380
     output_size = 3
     #logistic = LogisticRegression(input_size, output_size)
-    train_path = './data/gap-development.tsv'
-    valid_path = './data/gap-validation.tsv'
-    test_path = './data/gap-test.tsv'
+    train_path = './Data/gap-development.tsv'
+    valid_path = './Data/gap-validation.tsv'
+    test_path = './Data/gap-test.tsv'
 
     dataloader = GapDataset(train_path, valid_path,test_path, batch_size=32)
     x_train, x_train_pad, y_train = dataloader.load('train', 30)
 
 #    x_valid, x_valid_pad, y_valid = dataloader.load('valid', 30)
 #    x_test, x_test_pad, y_test = dataloader.load('test', 30)
-    RNN_model = RNNLinear(input_size, output_size, 2, 2)
+    RNN_model = RNN(input_size, output_size, 2, 2)
     RNN_class = model_train(RNN_model, 
         x_train, x_train_pad, y_train,
         x_train, x_train_pad, y_train,
@@ -244,7 +244,7 @@ def main():
 
     optimizer = optim.SGD(RNN_model.parameters(), lr = 0.01, momentum=0.9)
     max_grad_norm = 5
-    totla_loss, total_acc = RNN_class.train(optimizer, max_grad_norm)
+    total_loss, total_acc = RNN_class.train(optimizer, max_grad_norm)
 
 
     """
