@@ -29,12 +29,12 @@ class RNNLinear(nn.Module):
 #    x_train, x_train_pad, y_train = dataloader.load('train', 30)
 
 
- #   print("DATA LOADED.")
+#   print("DATA LOADED.")
 
 
 
 
 #if __name__ == '__main__':
-    main()
+#   main()
 
 
