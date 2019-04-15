@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn
 import nltk
+nltk.download ('punkt')
 from nltk.tokenize import word_tokenize
 from torchtext import data
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -508,19 +509,19 @@ class GapDataset(object):  # one seperate object, formal way to declare object
 
 
 
-# will remove this later: just trying to see how the output looks like
-def main():
-    train_path = './Data/gap-development.tsv'
-    valid_path = './Data/gap-validation.tsv'
-    test_path = './Data/gap-test.tsv'
-    dataloader = GapDataset(train_path, valid_path, test_path)
-    x_train, x_train_pad, y_train = dataloader.load('train', 30)
+# # will remove this later: just trying to see how the output looks like
+# def main():
+#     train_path = './Data/gap-development.tsv'
+#     valid_path = './Data/gap-validation.tsv'
+#     test_path = './Data/gap-test.tsv'
+#     dataloader = GapDataset(train_path, valid_path, test_path)
+#     x_train, x_train_pad, y_train = dataloader.load('train', 30)
+#
+#
+#     print("DATA LOADED.")
 
 
-    print("DATA LOADED.")
 
 
-
-
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
