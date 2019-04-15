@@ -15,7 +15,7 @@ class RNNLinear(nn.Module):
 
     def forward(self, x):
         print("ENTERING HERE")
-        #x = x.transpose(0, 1)  # Input needs to be of dimension (seq_len, batch_size, input_size)
+        x = x.transpose(0, self.input_size)  # Input needs to be of dimension (seq_len, batch_size, input_size)
         output, hidden_T = self.rnn(x)
         pred = self.linear(hidden_T[-1])
 
