@@ -110,7 +110,7 @@ class model_train(object):
         model_train.num_of_train += 1 # increments training times
         #RNN_new.hidden = rnn.initHidden()
 
-        self.model.train()  #
+        #self.model.train()  #
 
         total_loss = []
         total_acc = []
@@ -118,6 +118,7 @@ class model_train(object):
 
 
         for epoch in range(self.epoch_size):
+            self.model.train()
             epoch_loss = []
             epoch_acc = []
             for i, target in enumerate(self.y_train):
@@ -131,13 +132,13 @@ class model_train(object):
                 this_pad = [np.asarray(x).ravel() for x in this_pad]
 
                 # data x pad then concat all emb's together
-                input = [np.multiply(x, y) for x, y in zip(this_batch, this_pad)]
-                input = torch.from_numpy(np.concatenate(input).ravel())
+                input_z = [np.multiply(x, y) for x, y in zip(this_batch, this_pad)]
+                input_z = torch.from_numpy(np.concatenate(input_z).ravel())
 
-                print(input.shape)
+                print(input_z.shape)
 
                 
-                y_pred = self.model(input)
+                y_pred = self.model(input_z)
                 print("Y_PRED", y_pred)
                 loss = multiclass_log_loss(target, y_pred)
                 print(loss)
