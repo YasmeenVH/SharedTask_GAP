@@ -20,9 +20,10 @@ class RNNLinear(nn.Module):
         print("ENTERING HERE")
         #x = x.transpose(0, 1)  # Input needs to be of dimension (seq_len, batch_size, input_size)
         #output, hidden_T = self.rnn(x)
-        out1, _ = self.rnn(x)
+        out1, hid1 = self.rnn(x)
+        self.dropout(hid1)
         #pred = self.linear(hidden_T[-1])
-        out2 = self.linear(out1[:,-1,:])
+        out2 = self.linear(hid1[-1])
         return out2
 
 #def main():
