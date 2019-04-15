@@ -239,7 +239,7 @@ def main():
 
 #    x_valid, x_valid_pad, y_valid = dataloader.load('valid', 30)
 #    x_test, x_test_pad, y_test = dataloader.load('test', 30)
-    RNN_model = RNNLinear(input_size, hidden_size, output_size)
+    RNN_model = RNNLinear(input_size, output_size, hidden_size,2)
     RNN_class = model_train(RNN_model, 
         x_train, x_train_pad, y_train,
         x_train, x_train_pad, y_train,
