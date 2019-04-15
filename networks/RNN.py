@@ -7,19 +7,23 @@ class RNNLinear(nn.Module):
     def __init__(self, input_size, output_size, hidden_size, n_layers):
         super(RNNLinear, self).__init__()
 
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.n_layers = n_layers
         self.rnn = nn.RNN(input_size,
                           hidden_size,
-                          n_layers)
+                          n_layers, dropout=0.5, batch = True)
 
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.linear = nn.Linear(hidden_size, input_size, bias = True)
 
     def forward(self, x):
         print("ENTERING HERE")
-        x = x.transpose(0, self.input_size)  # Input needs to be of dimension (seq_len, batch_size, input_size)
-        output, hidden_T = self.rnn(x)
-        pred = self.linear(hidden_T[-1])
-
-        return pred
+        #x = x.transpose(0, 1)  # Input needs to be of dimension (seq_len, batch_size, input_size)
+        #output, hidden_T = self.rnn(x)
+        out1, _ = self.rnn(x)
+        #pred = self.linear(hidden_T[-1])
+        out2 = self.linear(out1[:,-1,:])
+        return out2
 
 #def main():
 
