@@ -107,6 +107,7 @@ class model_train(object):
     def train(self, optimizer, max_grad_norm):
 
         model_train.num_of_train += 1 # increments training times
+        RNN_new.hidden = rnn.initHidden()
 
         self.model.train()  #
 
