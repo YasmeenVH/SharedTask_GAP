@@ -244,7 +244,7 @@ def main():
     RNN_class = model_train(RNN_model, 
         x_train, x_train_pad, y_train,
         x_train, x_train_pad, y_train,
-        x_train, x_train_pad, y_train, 32)
+        x_train, x_train_pad, y_train, 64)
 
     optimizer = optim.SGD(RNN_model.parameters(), lr = 0.01, momentum=0.9)
     max_grad_norm = 5
